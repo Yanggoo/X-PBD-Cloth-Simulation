@@ -1,0 +1,2 @@
+C:\Users\Griffith\Desktop\ClothSimulation\x64\Debug\freeglutd.dll
+C:\Users\Griffith\Desktop\ClothSimulation\ClothSimulation\x64\Debug\ClothSim.3EE7C692.Up2Date
