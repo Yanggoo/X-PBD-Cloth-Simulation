@@ -24,11 +24,12 @@ namespace ClothSimulation {
 
 		// 检查是否需要进行固定时间步更新
 		bool NeedsFixedUpdate() {
-			if (m_FixedTimeAccumulator >= m_FixedUpdateInterval) {
+			bool need = false;
+			while (m_FixedTimeAccumulator >= m_FixedUpdateInterval) {
 				m_FixedTimeAccumulator -= m_FixedUpdateInterval; // 减去固定更新间隔
-				return true;
+				need = true;
 			}
-			return false;
+			return need;
 		}
 
 		// 获取 DeltaTime

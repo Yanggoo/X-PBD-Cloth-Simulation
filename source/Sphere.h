@@ -14,7 +14,7 @@ public:
 
 	float m_Radius;
 	float m_Frequency;
-	const float m_Amplitude = 2.0f;
+	const float m_Amplitude = 3.0f;
 	glm::vec3 m_Position;
 };
 

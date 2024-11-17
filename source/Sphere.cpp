@@ -19,7 +19,7 @@ void Sphere::Update(float deltaTime)
 
 void Sphere::FixedUpdate(float deltaTime)
 {
-	m_Frequency += deltaTime / 5.0f;
+	m_Frequency += deltaTime;
 	if (m_Frequency > 2 * glm::pi<float>())
 	{
 		m_Frequency -= 2 * glm::pi<float>();
@@ -44,9 +44,9 @@ void Sphere::Initialize(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)
 
 glm::vec3 Sphere::ComputeSDF(glm::vec3 position)
 {
-	if (glm::length(position - m_Position) < m_Radius)
+	if (glm::length(position - m_Position) < 0.1f+m_Radius)
 	{
-		return glm::normalize(position - m_Position) * (glm::length(position - m_Position) - m_Radius);
+		return glm::normalize(position - m_Position) * (0.1f+m_Radius - glm::length(position - m_Position));
 	}
 	else
 	{

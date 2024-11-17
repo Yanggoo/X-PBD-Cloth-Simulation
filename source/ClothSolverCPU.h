@@ -25,11 +25,12 @@ public:
 	std::vector<glm::vec3> m_Velocities;
 	std::vector<Particle*> m_Particles;
 	std::vector<Collider*> m_Colliders;
+	std::vector<float>m_Lambdas;
 	int m_ParticlesNum;
 	int m_IterationNum;
 	int m_Substeps;
-	const float m_BendCompliance = 10;
-	const float m_Damping = 0.1;
+	const float m_BendCompliance = 0.5;
+	const float m_Damping = 1;
 	const float m_Epsilon = 1e-6;
 
 	std::vector<std::tuple<int, int, float>> m_StretchConstraints; // idx1, idx2, distance

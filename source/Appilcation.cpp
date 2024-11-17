@@ -93,6 +93,10 @@ void Application::Idle(void)
 void Application::KeyBoard(unsigned char key, int x, int y)
 {
 	// Implementation of KeyBoard
+	if (key == 27)
+	{
+		m_AppRunning = false;
+	}
 }
 
 void Application::Special(int key, int x, int y)
@@ -120,6 +124,11 @@ void Application::Mouse(int button, int state, int x, int y)
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 	{
 		// TODO - mouse left button down event
+		// Winston : I think this is where we can add the mouse interaction with the cloth
+		//Particle* p = m_Scene.GetParticleAtScreenPos(x, y);
+		//p->SetPosition()
+		//p->m_InvMass = 0.0f;
+
 	}
 	else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP)
 	{

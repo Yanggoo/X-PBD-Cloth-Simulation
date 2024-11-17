@@ -54,7 +54,7 @@ void Scene::LoadScene()
 	std::shared_ptr<Sphere> sphere = std::make_shared<Sphere>(0.1f);
 	sphere->Initialize(glm::vec3(0, 0, 1), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(sphere);
-	std::shared_ptr<Cloth> cloth = std::make_shared<Cloth>(2, 2, 20, 20);
+	std::shared_ptr<Cloth> cloth = std::make_shared<Cloth>(2, 2, 50, 50);
 	cloth->Initialize(glm::vec3(0, 0, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(cloth);
 	std::shared_ptr<ClothSolverCPU> solver = std::make_shared<ClothSolverCPU>();
