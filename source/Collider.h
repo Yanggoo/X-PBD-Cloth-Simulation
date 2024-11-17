@@ -5,6 +5,6 @@ class Collider
 public:
 	Collider();
 	~Collider();
-	glm::vec3 ComputeSDF(glm::vec3  position);
+	virtual glm::vec3 ComputeSDF(glm::vec3  position);
 };
 

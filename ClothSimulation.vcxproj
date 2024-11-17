@@ -129,13 +129,13 @@
   <ItemGroup>
     <ClCompile Include="source\Collider.cpp" />
     <ClCompile Include="source\ClothSolverCPU.cpp" />
-    <ClCompile Include="source\Particle.cpp" />
     <ClCompile Include="source\Cloth.cpp" />
     <ClCompile Include="source\Actor.cpp" />
     <ClCompile Include="source\Scene.cpp" />
     <ClCompile Include="source\Appilcation.cpp" />
     <ClCompile Include="source\main.cpp" />
     <ClCompile Include="source\Transform.cpp" />
+    <ClCompile Include="source\Sphere.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Collider.h" />
@@ -147,6 +147,7 @@
     <ClInclude Include="source\Application.h" />
     <ClInclude Include="source\Timer.h" />
     <ClInclude Include="source\Transform.h" />
+    <ClInclude Include="source\Sphere.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

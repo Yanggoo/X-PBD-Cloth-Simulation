@@ -7,15 +7,16 @@ Cloth::Cloth(float width, float height, int num_width, int num_height) : m_NumWi
 	m_Particles.reserve(m_NumWidth * m_NumHeight);
 	for (int w = 0; w < m_NumWidth; w++) {
 		for (int h = 0; h < m_NumHeight; h++) {
-			glm::vec3 pos = glm::vec3(w * (float)m_Width / (m_NumWidth - 1) - 0.5f * m_Width, h * (float)m_Height / (m_NumHeight-1) - 0.5f * m_Height, 0.0f);
+			glm::vec3 pos = glm::vec3(w * (float)m_Width / (m_NumWidth - 1) - 0.5f * m_Width, -h * (float)m_Height / (m_NumHeight-1) + 0.5f * m_Height, 0.0f);
 			float inv_mass = 1.0f;
 			if ((h == 0) && (w == 0) ||
-				(h == 0) && (w == m_Width - 1)) {
+				(h == 0) && (w == m_NumWidth - 1)) {
 				inv_mass = 0.0f; //fix only edge point
 			}
 			m_Particles.emplace_back(inv_mass, pos);
 		}
 	}
+
 
 }
 
@@ -31,7 +32,6 @@ void Cloth::Update(float deltaTime)
 
 void Cloth::FixedUpdate(float deltaTime)
 {
-
 }
 
 void Cloth::Draw()
@@ -73,4 +73,10 @@ void Cloth::DrawTriangle(Particle* p1, Particle* p2, Particle* p3, const glm::ve
 Particle* Cloth::GetParticle(int w, int h)
 {
 	return &m_Particles[w * m_NumWidth + h];
+}
+
+void Cloth::AddSolver(ClothSolverCPU* solver)
+{
+	m_ClothSolver = solver;
+	solver->ResponsibleFor(this);
 }

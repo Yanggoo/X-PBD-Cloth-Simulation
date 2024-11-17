@@ -3,6 +3,7 @@
 class Particle
 {
 public:
+	Particle() = default;
 	Particle(float inv_mass=1.0f, glm::vec3 position=glm::vec3(0,0,0)) :
 		m_InvMass(inv_mass),
 		m_Position(position) {}

@@ -1,5 +1,6 @@
 #include "ClothSolverCPU.h"
 #include <tuple>
+#include "Cloth.h"
 
 ClothSolverCPU::ClothSolverCPU()
 {
@@ -19,6 +20,7 @@ void ClothSolverCPU::ResponsibleFor(Cloth* cloth)
 {
 	int NumWidth = cloth->m_NumWidth;
 	int NumHeight = cloth->m_NumHeight;
+	int idxOffset = m_ParticlesNum;
 	for (int w = 0; w < NumWidth; w++)
 	{
 		for (int h = 0; h < NumHeight; h++)
@@ -31,25 +33,25 @@ void ClothSolverCPU::ResponsibleFor(Cloth* cloth)
 			// Stretch Constraints
 			if (w < NumWidth - 1)
 				m_StretchConstraints.push_back(
-					std::make_tuple(&cloth->m_Particles[w * NumHeight + h], 
-						&cloth->m_Particles[(w + 1) * NumHeight + h], 
-						glm::length(cloth->m_Particles[w * cloth->m_NumHeight + h].GetPosition() 
+					std::make_tuple(w * NumHeight + h + idxOffset,
+						(w + 1) * NumHeight + h + idxOffset,
+						glm::length(cloth->m_Particles[w * cloth->m_NumHeight + h].GetPosition()
 							- cloth->m_Particles[(w + 1) * cloth->m_NumHeight + h].GetPosition())));
 			if (h < NumHeight - 1)
 				m_StretchConstraints.push_back(
-					std::make_tuple(&cloth->m_Particles[w * NumHeight + h],
-						&cloth->m_Particles[w * NumHeight + h + 1],
+					std::make_tuple(w * NumHeight + h + idxOffset,
+						w * NumHeight + h + 1 + idxOffset,
 						glm::length(cloth->m_Particles[w * cloth->m_NumHeight + h].GetPosition()
 							- cloth->m_Particles[w * cloth->m_NumHeight + h + 1].GetPosition())));
 			// Bending Constraints
 			if (w < NumWidth - 1 && h < NumHeight - 1)
 			{
 				m_BendingConstraints.push_back(
-					std::make_tuple(&cloth->m_Particles[w * NumHeight + h],
-						&cloth->m_Particles[(w + 1) * NumHeight + h],
-						&cloth->m_Particles[w * NumHeight + h + 1],
-						&cloth->m_Particles[(w + 1) * NumHeight + h + 1],
-						glm::radians(180.0f)));
+					std::make_tuple(w * NumHeight + h + idxOffset,
+						(w + 1) * NumHeight + h + idxOffset,
+						w * NumHeight + h + 1 + idxOffset,
+						(w + 1) * NumHeight + h + 1 + idxOffset,
+						glm::radians(0.0f)));
 			}
 		}
 	}
@@ -65,16 +67,16 @@ void ClothSolverCPU::Simulate(float deltaTime)
 	float deltaTimeInSubstep = deltaTime / m_Substeps;
 	for (int substep = 0; substep < m_Substeps; substep++) {
 		PredictPositions(deltaTimeInSubstep);
-		for (int i = 0; i < m_IterationNum; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			SolveStretch(deltaTimeInSubstep);
 			SolveBending(deltaTimeInSubstep);
 			SolveParticleCollision();
 			CollideSDF(m_PredPositions);
 		}
-
 		for (int i = 0; i < m_ParticlesNum; i++) {
 			m_Velocities[i] = (m_PredPositions[i] - m_Positions[i]) / deltaTimeInSubstep;
+			m_Velocities[i] = m_Velocities[i] * glm::clamp((1.0f - m_Damping * deltaTime),0.0f,1.0f);
 			m_Positions[i] = m_PredPositions[i];
 		}
 	}
@@ -88,8 +90,8 @@ void ClothSolverCPU::PredictPositions(float deltaTime)
 	for (int i = 0; i < m_ParticlesNum; i++)
 	{
 		if (m_Particles[i]->m_InvMass == 0.0f) continue;
-		glm::vec3 pos = m_Particles[i]->GetPosition();
-		m_Velocities[i] += glm::vec3(0,-9.8,0)*deltaTime;
+		glm::vec3 pos = m_Positions[i];
+		m_Velocities[i] += glm::vec3(0, -9.8, 0) * deltaTime;
 		m_PredPositions[i] = pos + m_Velocities[i] * deltaTime;
 	}
 }
@@ -100,6 +102,7 @@ void ClothSolverCPU::CollideSDF(std::vector<glm::vec3>& position)
 	for (int i = 0; i < m_ParticlesNum; i++) {
 		for (auto col : m_Colliders)
 		{
+			if (m_Particles[i]->m_InvMass == 0.0f) continue;
 			auto pos = position[i];
 			glm::vec3 correction = col->ComputeSDF(pos);
 			position[i] += correction;
@@ -109,12 +112,74 @@ void ClothSolverCPU::CollideSDF(std::vector<glm::vec3>& position)
 
 void ClothSolverCPU::SolveStretch(float deltaTime)
 {
+	for (auto constrain : m_StretchConstraints) {
+		int idx1 = std::get<0>(constrain);
+		int idx2 = std::get<1>(constrain);
+		Particle* p1 = m_Particles[idx1];
+		Particle* p2 = m_Particles[idx2];
+		auto w1 = p1->m_InvMass;
+		auto w2 = p2->m_InvMass;
+		float distance = std::get<2>(constrain);
+		glm::vec3 p1p2 = m_Positions[idx1] - m_Positions[idx2];
+		float currentDistance = glm::length(p1p2);
+		if (currentDistance > distance && w1 + w2 > 0) {
+			// alpha equals to 0, because stiffness is infinite
+			float C = currentDistance - distance;
+			glm::vec3 gradientP1 = p1p2 / (currentDistance + m_Epsilon);
+			glm::vec3 gradientP2 = -p1p2 / (currentDistance + m_Epsilon);
+			float deltaLambda = -C / (w1 + w2);//should be /(w1*glm::lenth2(gradientP1)+...) But lenth2(gradientP1) equals to 1
+			m_PredPositions[idx1] += gradientP1 * deltaLambda * w1;
+			m_PredPositions[idx2] += gradientP2 * deltaLambda * w2;
+		}
 
+	}
 }
 
 void ClothSolverCPU::SolveBending(float deltaTime)
 {
-
+	float alpha = m_BendCompliance / deltaTime / deltaTime;
+	for (auto constrain : m_BendingConstraints) {
+		int idx0 = std::get<0>(constrain);
+		int idx1 = std::get<1>(constrain);
+		int idx2 = std::get<2>(constrain);
+		int idx3 = std::get<3>(constrain);
+		auto w0 = m_Particles[idx0]->m_InvMass;
+		auto w1 = m_Particles[idx1]->m_InvMass;
+		auto w2 = m_Particles[idx2]->m_InvMass;
+		auto w3 = m_Particles[idx3]->m_InvMass;
+		glm::vec3 p0 = m_Positions[idx0];
+		glm::vec3 p1 = m_Positions[idx1];
+		glm::vec3 p2 = m_Positions[idx2];
+		glm::vec3 p3 = m_Positions[idx3];
+		float angle = std::get<4>(constrain);
+		glm::vec3 n1 = glm::normalize(glm::cross(p2-p0, p1-p2));
+		glm::vec3 n2 = glm::normalize(glm::cross(p2-p1, p3-p2));
+		float d = glm::dot(n1, n2);
+		d = glm::clamp(d, 0.0f, 1.0f);
+		float currentAngle = glm::acos(d);
+		if (abs(currentAngle- angle) < m_Epsilon || isnan(d)) continue;
+		if (w0 + w1 + w2 + w3 > 0) {
+			float C = currentAngle - angle;
+			glm::vec3 gradientP2 = (glm::cross(p1, n2) + d * glm::cross(n1, p1)) / (glm::length(glm::cross(p1, p2)) + m_Epsilon);
+			glm::vec3 gradientP3 = (glm::cross(p1, n1) + d * glm::cross(n2, p1)) / (glm::length(glm::cross(p1, p3)) + m_Epsilon);
+			glm::vec3 gradientP1 = -(glm::cross(p2, n2) + d * glm::cross(n1, p2)) / glm::length(glm::cross(p1, p2) + m_Epsilon)
+				- (glm::cross(p3, n1) + d * glm::cross(n2, p3)) / glm::length(glm::cross(p1, p3) + m_Epsilon);
+			glm::vec3 gradientP0 = -gradientP1 - gradientP2 - gradientP3;
+			float denominator
+				= w0 * glm::dot(gradientP0, gradientP0)
+				+ w1 * glm::dot(gradientP1, gradientP1)
+				+ w2 * glm::dot(gradientP2, gradientP2)
+				+ w3 * glm::dot(gradientP3, gradientP3)
+				+ alpha;
+			if (denominator
+				< m_Epsilon) continue;
+			float deltaLambda = -C / denominator;
+			m_PredPositions[idx0] += gradientP0 * deltaLambda * w0;
+			m_PredPositions[idx1] += gradientP1 * deltaLambda * w1;
+			m_PredPositions[idx2] += gradientP2 * deltaLambda * w2;
+			m_PredPositions[idx3] += gradientP3 * deltaLambda * w3;
+		}
+	}
 }
 
 void ClothSolverCPU::SolveParticleCollision()
@@ -125,6 +190,7 @@ void ClothSolverCPU::SolveParticleCollision()
 void ClothSolverCPU::WriteBackPositions()
 {
 	for (int i = 0; i < m_ParticlesNum; i++) {
+		if (m_Particles[i]->m_InvMass == 0.0f) continue;
 		m_Particles[i]->SetPosition(m_Positions[i]);
 	}
 }

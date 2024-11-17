@@ -1,13 +1,14 @@
 #pragma once
 #include <vector>
 #include "Particle.h"
-#include "Cloth.h"
 #include "Collider.h"
+#include <tuple>
+class Cloth;
 class ClothSolverCPU
 {
 public:
 	ClothSolverCPU();
-	~ClothSolverCPU()=default;
+	~ClothSolverCPU() = default;
 
 	void ResponsibleFor(Cloth* cloth);
 	void Simulate(float deltaTime);
@@ -27,13 +28,16 @@ public:
 	int m_ParticlesNum;
 	int m_IterationNum;
 	int m_Substeps;
+	const float m_BendCompliance = 10;
+	const float m_Damping = 0.1;
+	const float m_Epsilon = 1e-6;
 
-	std::vector<std::tuple<Particle*, Particle*, float>> m_StretchConstraints; // idx1, idx2, distance
-	std::vector<std::tuple<Particle*, Particle*, Particle*, Particle*, float>> m_BendingConstraints; // idx1, idx2, idx3, idx4, angle
+	std::vector<std::tuple<int, int, float>> m_StretchConstraints; // idx1, idx2, distance
+	std::vector<std::tuple<int, int, int, int, float>> m_BendingConstraints; // idx1, idx2, idx3, idx4, angle
 
 	//std::vector<std::tuple<Particle*, Particle*, Particle*, Particle*>> m_SelfCollisionConstraints; // idx1, triangle(idx2, idx3, idx4)
 	//std::vector<std::tuple<Particle*, glm::vec3>> m_AttachmentConstriants; // idx1, position
-	
-	
+
+
 };
 

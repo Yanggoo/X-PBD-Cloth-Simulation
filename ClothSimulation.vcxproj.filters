@@ -33,13 +33,13 @@
     <ClCompile Include="source\Cloth.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="source\Particle.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="source\ClothSolverCPU.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\Collider.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Sphere.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -69,6 +69,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="source\Collider.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Sphere.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -2,6 +2,7 @@
 #include "Actor.h"
 #include "Particle.h"
 #include <vector>
+#include "ClothSolverCPU.h"
 class Cloth :
     public Actor
 {
@@ -15,12 +16,14 @@ public:
 	void Initialize(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation) override;
 	void DrawTriangle(Particle* p1, Particle* p2, Particle* p3, const glm::vec3 color);
 	Particle* GetParticle(int w, int h);
+	void AddSolver(ClothSolverCPU* solver);
 
 private:
 	int m_NumWidth;
 	int m_NumHeight;
-	int m_Width;
-	int m_Height;
+	float m_Width;
+	float m_Height;
 	std::vector<Particle> m_Particles;
+	ClothSolverCPU* m_ClothSolver;
 };
 
