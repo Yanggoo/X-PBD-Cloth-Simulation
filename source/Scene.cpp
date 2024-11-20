@@ -1,6 +1,8 @@
 #include "Scene.h"
 #include "Cloth.h"
 #include "Sphere.h"
+#include "Globals.h"
+
 Scene::Scene()
 {
 
@@ -54,10 +56,19 @@ void Scene::LoadScene()
 	std::shared_ptr<Sphere> sphere = std::make_shared<Sphere>(0.1f);
 	sphere->Initialize(glm::vec3(0, 0, 1), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(sphere);
-	std::shared_ptr<Cloth> cloth = std::make_shared<Cloth>(2, 2, 50, 50);
+	std::shared_ptr<Cloth> cloth = std::make_shared<Cloth>(2, 2, 64, 64);
 	cloth->Initialize(glm::vec3(0, 0, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(cloth);
-	std::shared_ptr<ClothSolverCPU> solver = std::make_shared<ClothSolverCPU>();
+
+	std::shared_ptr<ClothSolverBase> solver;
+#if USE_GPU_SOLVER
+	solver = std::make_shared<ClothSolverGPU>();
+#else
+	solver = std::make_shared<ClothSolverCPU>();
+#endif // USE_GPU_SOLVER
+
+	//std::shared_ptr<ClothSolverBase> solver = std::make_shared<ClothSolverCPU>();
+	//std::shared_ptr<ClothSolverBase> solver = std::make_shared<ClothSolverGPU>();
 	Collider* sphereCollider = dynamic_cast<Collider*>(sphere.get());
 	if (sphereCollider)
 		solver->m_Colliders.push_back(sphereCollider);

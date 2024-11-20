@@ -2,7 +2,10 @@
 #include "Actor.h"
 #include <vector>
 #include <memory>
+#include "ClothSolverBase.h"
 #include "ClothSolverCPU.h"
+#include "ClothSolverGPU.h"
+
 class Scene
 {
 public:
@@ -16,6 +19,6 @@ public:
 	void LoadScene();
 private:
 	std::vector<std::shared_ptr<Actor>> m_Actors;
-	std::vector<std::shared_ptr<ClothSolverCPU>> m_Solvers;
+	std::vector<std::shared_ptr<ClothSolverBase>> m_Solvers;
 };
 

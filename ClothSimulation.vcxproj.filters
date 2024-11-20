@@ -42,6 +42,12 @@
     <ClCompile Include="source\Sphere.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="source\ClothSolverGPU.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ClothSolverBase.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Application.h">
@@ -74,5 +80,18 @@
     <ClInclude Include="source\Sphere.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="source\SolverKernel.cuh" />
+    <ClInclude Include="source\ClothSolverGPU.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ClothSolverBase.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Globals.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="source\SolverKernel.cu" />
   </ItemGroup>
 </Project>

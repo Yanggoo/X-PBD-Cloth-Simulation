@@ -33,6 +33,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.6.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
@@ -64,7 +65,12 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(CudaToolkitLibDir)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart_static.lib</AdditionalDependencies>
     </Link>
+    <CudaCompile>
+      <Runtime>InheritFromHost</Runtime>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -80,9 +86,16 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(CudaToolkitLibDir)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart_static.lib</AdditionalDependencies>
     </Link>
+    <CudaCompile>
+      <Runtime>InheritFromHost</Runtime>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="source\ClothSolverBase.cpp" />
+    <ClCompile Include="source\ClothSolverGPU.cpp" />
     <ClCompile Include="source\Collider.cpp" />
     <ClCompile Include="source\ClothSolverCPU.cpp" />
     <ClCompile Include="source\Cloth.cpp" />
@@ -94,18 +107,26 @@
     <ClCompile Include="source\Sphere.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\ClothSolverBase.h" />
+    <ClInclude Include="source\ClothSolverGPU.h" />
     <ClInclude Include="source\Collider.h" />
     <ClInclude Include="source\ClothSolverCPU.h" />
+    <ClInclude Include="source\Globals.h" />
     <ClInclude Include="source\Particle.h" />
     <ClInclude Include="source\Cloth.h" />
     <ClInclude Include="source\Actor.h" />
     <ClInclude Include="source\Scene.h" />
     <ClInclude Include="source\Application.h" />
+    <ClInclude Include="source\SolverKernel.cuh" />
     <ClInclude Include="source\Timer.h" />
     <ClInclude Include="source\Transform.h" />
     <ClInclude Include="source\Sphere.h" />
   </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="source\SolverKernel.cu" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.6.targets" />
   </ImportGroup>
 </Project>

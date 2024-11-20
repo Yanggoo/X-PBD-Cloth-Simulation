@@ -3,15 +3,17 @@
 #include "Particle.h"
 #include "Collider.h"
 #include <tuple>
+#include "ClothSolverBase.h"
+
 class Cloth;
-class ClothSolverCPU
+class ClothSolverCPU : public ClothSolverBase
 {
 public:
 	ClothSolverCPU();
 	~ClothSolverCPU() = default;
 
-	void ResponsibleFor(Cloth* cloth);
-	void Simulate(float deltaTime);
+	void ResponsibleFor(Cloth* cloth) override;
+	void Simulate(float deltaTime) override;
 	void PredictPositions(float deltaTime);
 	void CollideSDF(std::vector<glm::vec3>& position);
 	void SolveStretch(float deltaTime);
@@ -24,7 +26,7 @@ public:
 	std::vector<glm::vec3> m_Positions;
 	std::vector<glm::vec3> m_Velocities;
 	std::vector<Particle*> m_Particles;
-	std::vector<Collider*> m_Colliders;
+	//std::vector<Collider*> m_Colliders;
 	std::vector<float>m_Lambdas;
 	int m_ParticlesNum;
 	int m_IterationNum;

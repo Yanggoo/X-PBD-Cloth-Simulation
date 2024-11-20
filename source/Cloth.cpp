@@ -75,7 +75,7 @@ Particle* Cloth::GetParticle(int w, int h)
 	return &m_Particles[w * m_NumWidth + h];
 }
 
-void Cloth::AddSolver(ClothSolverCPU* solver)
+void Cloth::AddSolver(ClothSolverBase* solver)
 {
 	m_ClothSolver = solver;
 	solver->ResponsibleFor(this);
