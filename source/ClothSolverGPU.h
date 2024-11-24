@@ -15,6 +15,10 @@ public:
     void Simulate(float deltaTime) override;
 
 private:
+    
+    size_t particleCount;
+
+
     glm::vec3* dev_position;
     glm::vec3* dev_predictPosition;
     glm::vec3* dev_velocity;
