@@ -22,8 +22,12 @@ __global__ void updateVelocityAndWriteBack(
     glm::vec3* velocity,
     float deltaTime,
     float damping,
-    int numParticles) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int numParticles) 
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+    int idx = y * blockDim.x * gridDim.x + x;
+    //int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= numParticles) return;
 
     glm::vec3 vel = (predictPosition[idx] - position[idx]) / deltaTime;

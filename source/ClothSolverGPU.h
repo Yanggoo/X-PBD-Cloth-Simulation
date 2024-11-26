@@ -15,9 +15,17 @@ public:
     void Simulate(float deltaTime) override;
 
 private:
+
+    void CopyBackToCPU();
     
     size_t particleCount;
+    int m_Substeps;
+    int m_IterationNum;
 
+    //std::vector<glm::vec3> m_PredPositions;
+    std::vector<glm::vec3> m_Positions;
+    //std::vector<glm::vec3> m_Velocities;
+    std::vector<Particle*> m_Particles;
 
     glm::vec3* dev_position;
     glm::vec3* dev_predictPosition;

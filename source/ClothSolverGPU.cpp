@@ -19,14 +19,17 @@ void checkCUDAError(const char* msg, int line = -1) {
 }
 
 
-ClothSolverGPU::ClothSolverGPU()
+ClothSolverGPU::ClothSolverGPU() :
+    dev_position(nullptr), dev_predictPosition(nullptr), dev_velocity(nullptr), particleCount(0)
 {
-    
+    m_Substeps = 5;
+    m_IterationNum = 5;
 }
 
 ClothSolverGPU::~ClothSolverGPU() {
     cudaFree(dev_position);
     cudaFree(dev_predictPosition);
+    cudaFree(dev_velocity);
 }
 
 void ClothSolverGPU::ResponsibleFor(Cloth* cloth) {
@@ -34,6 +37,13 @@ void ClothSolverGPU::ResponsibleFor(Cloth* cloth) {
 
     int NumWidth = cloth->m_NumWidth;
     int NumHeight = cloth->m_NumHeight;
+    m_Particles.reserve(NumWidth * NumHeight);
+    m_Positions.resize(NumWidth * NumHeight);
+    for (size_t w = 0; w < NumWidth; w++) {
+        for (size_t h = 0; h < NumHeight; h++) {
+            m_Particles.push_back(&cloth->m_Particles[w * NumHeight + h]);
+        }
+    }
 
     if (cloth->m_NumWidth % threadDimX != 0) {
         fprintf(stderr, "Cloth width must be divisible by %d\n", threadDimX);
@@ -90,12 +100,30 @@ void ClothSolverGPU::ResponsibleFor(Cloth* cloth) {
 }
 
 void ClothSolverGPU::Simulate(float deltaTime) {
-    ClothSolver::CalculatePredictPosition(blocksPerGrid, threadsPerBlock, dev_position, dev_predictPosition, dev_velocity, deltaTime);
-    
-    cudaDeviceSynchronize();
+    // todo collision
 
+    float deltaTimeInSubstep = deltaTime / m_Substeps;
+    for (int substep = 0; substep < m_Substeps; substep++) {
+        ClothSolver::CalculatePredictPosition(blocksPerGrid, threadsPerBlock, dev_position, dev_predictPosition, dev_velocity, deltaTimeInSubstep);
+        cudaDeviceSynchronize();
+        for (int i = 0; i < m_IterationNum; i++) {
+            // todo constrains
+        }
 
-    ClothSolver::UpdateVelocityAndWriteBack(blocksPerGrid, threadsPerBlock, dev_position, dev_predictPosition, dev_velocity, deltaTime, 0.1f, particleCount);
-    
-    cudaDeviceSynchronize();
+        ClothSolver::UpdateVelocityAndWriteBack(blocksPerGrid, threadsPerBlock, dev_position, dev_predictPosition, dev_velocity, deltaTimeInSubstep, 0.1f, particleCount);
+        cudaDeviceSynchronize();
+    }
+
+    // todo use cudaGL
+    CopyBackToCPU();
+}
+
+void ClothSolverGPU::CopyBackToCPU() {
+    cudaMemcpy(&m_Positions[0], dev_position, particleCount * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
+    checkCUDAErrorWithLine("cudaMemcpy to position failed!");
+
+    for (int i = 0; i < particleCount; i++) {
+        if (m_Particles[i]->m_InvMass == 0.0f) continue;
+        m_Particles[i]->SetPosition(m_Positions[i]);
+    }
 }
