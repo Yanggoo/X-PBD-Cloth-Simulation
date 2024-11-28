@@ -21,6 +21,10 @@ private:
     size_t particleCount;
     int m_Substeps;
     int m_IterationNum;
+    float m_ConstraintDistances;
+
+    int NumWidth;
+    int NumHeight;
 
     //std::vector<glm::vec3> m_PredPositions;
     std::vector<glm::vec3> m_Positions;
@@ -30,6 +34,7 @@ private:
     glm::vec3* dev_position;
     glm::vec3* dev_predictPosition;
     glm::vec3* dev_velocity;
+    glm::float32* dev_invMass;
 
     dim3 blocksPerGrid;
     dim3 threadsPerBlock;

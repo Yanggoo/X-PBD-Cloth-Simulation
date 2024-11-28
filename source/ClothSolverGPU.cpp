@@ -1,5 +1,5 @@
 #include "ClothSolverGPU.h"
-
+//#include <iostream>
 #include <stdio.h>
 
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
@@ -35,8 +35,8 @@ ClothSolverGPU::~ClothSolverGPU() {
 void ClothSolverGPU::ResponsibleFor(Cloth* cloth) {
 
 
-    int NumWidth = cloth->m_NumWidth;
-    int NumHeight = cloth->m_NumHeight;
+    NumWidth = cloth->m_NumWidth;
+    NumHeight = cloth->m_NumHeight;
     m_Particles.reserve(NumWidth * NumHeight);
     m_Positions.resize(NumWidth * NumHeight);
     for (size_t w = 0; w < NumWidth; w++) {
@@ -55,6 +55,7 @@ void ClothSolverGPU::ResponsibleFor(Cloth* cloth) {
 
     threadsPerBlock = dim3(threadDimX, threadDimY, 1);
     blocksPerGrid = dim3(cloth->m_NumWidth / threadDimX, cloth->m_NumHeight / threadDimY, 1);
+    //blocksPerGrid = dim3(cloth->m_NumWidth + threadDimX - 1 / threadDimX, cloth->m_NumHeight + threadDimY-1 / threadDimY, 1);
 
     particleCount = static_cast<size_t>(cloth->m_NumWidth) * cloth->m_NumHeight;
     cudaMalloc((void**)&dev_position, particleCount * sizeof(glm::vec3));
@@ -67,10 +68,14 @@ void ClothSolverGPU::ResponsibleFor(Cloth* cloth) {
     cudaMalloc((void**)&dev_velocity, particleCount * sizeof(glm::vec3));
     checkCUDAErrorWithLine("cudaMalloc dev_velocity failed!");
 
+    cudaMalloc((void**)&dev_invMass, particleCount * sizeof(float));
+    checkCUDAErrorWithLine("cudaMalloc dev_invMass failed!");
+
 
     glm::vec3* host_position = new glm::vec3[particleCount];
     glm::vec3* host_predictPosition = new glm::vec3[particleCount];
     glm::vec3* host_velocity = new glm::vec3[particleCount];
+    float* host_invMass = new float[particleCount];
 
     for (size_t i = 0; i < NumWidth; i++) {
         for (size_t j = 0; j < NumHeight; j++) {
@@ -78,8 +83,10 @@ void ClothSolverGPU::ResponsibleFor(Cloth* cloth) {
             host_position[idx] = cloth->m_Particles[idx].GetPosition();
             host_predictPosition[idx] = cloth->m_Particles[idx].GetPosition();
             host_velocity[idx] = glm::vec3(0.0f);
+            host_invMass[idx] = cloth->m_Particles[idx].m_InvMass;
         }
     }
+
 
     cudaMemcpy(dev_position, host_position, particleCount * sizeof(glm::vec3), cudaMemcpyHostToDevice);
     checkCUDAErrorWithLine("cudaMemcpy to dev_position failed!");
@@ -90,11 +97,29 @@ void ClothSolverGPU::ResponsibleFor(Cloth* cloth) {
     cudaMemcpy(dev_velocity, host_velocity, particleCount * sizeof(glm::vec3), cudaMemcpyHostToDevice);
     checkCUDAErrorWithLine("cudaMemcpy to dev_velocity failed!");
 
+    cudaMemcpy(dev_invMass, host_invMass, particleCount * sizeof(float), cudaMemcpyHostToDevice);
+    checkCUDAErrorWithLine("cudaMemcpy to dev_invMass failed!");
+    
+
+
     delete[] host_position;
     delete[] host_predictPosition;
     delete[] host_velocity;
+    delete[] host_invMass;
 
     // Add constraints here
+
+    // TODO: Stretch Constraints should be seperated into horizontal and vertical constraints (Record vertical and horizontal distances constraints separately)
+
+    //m_ConstraintDistances = new float[2];
+
+    //m_ConstraintDistances[0] = glm::length(cloth->m_Particles[0].GetPosition() - cloth->m_Particles[1].GetPosition());
+    //m_ConstraintDistances[1] = glm::length(cloth->m_Particles[0].GetPosition() - cloth->m_Particles[NumHeight].GetPosition());
+
+    //std::cout<<m_ConstraintDistances[0]<<std::endl;
+    //std::cout<<m_ConstraintDistances[1]<<std::endl;
+
+    m_ConstraintDistances = glm::length(cloth->m_Particles[0].GetPosition() - cloth->m_Particles[1].GetPosition());
 
     cudaDeviceSynchronize();
 }
@@ -104,12 +129,18 @@ void ClothSolverGPU::Simulate(float deltaTime) {
 
     float deltaTimeInSubstep = deltaTime / m_Substeps;
     for (int substep = 0; substep < m_Substeps; substep++) {
-        ClothSolver::CalculatePredictPosition(blocksPerGrid, threadsPerBlock, dev_position, dev_predictPosition, dev_velocity, deltaTimeInSubstep);
+        ClothSolver::CalculatePredictPosition(blocksPerGrid, threadsPerBlock, dev_position, dev_predictPosition, dev_invMass, dev_velocity, deltaTimeInSubstep);
         cudaDeviceSynchronize();
         for (int i = 0; i < m_IterationNum; i++) {
             // todo constrains
+            ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass,m_ConstraintDistances,NumWidth,NumHeight, particleCount,0.1, 0);
+            ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 0.1, 1);
+            // NEEDFIX: IT SEEMS THAT IT MADE NO DIFFERENCE ON DEALING WITH DIFFERNET DIRECTIONS
+            
+            //ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 0.1, 2);
+            //ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 0.1, 3);
         }
-
+                                                                                                                                                                
         ClothSolver::UpdateVelocityAndWriteBack(blocksPerGrid, threadsPerBlock, dev_position, dev_predictPosition, dev_velocity, deltaTimeInSubstep, 0.1f, particleCount);
         cudaDeviceSynchronize();
     }
@@ -117,6 +148,9 @@ void ClothSolverGPU::Simulate(float deltaTime) {
     // todo use cudaGL
     CopyBackToCPU();
 }
+
+
+
 
 void ClothSolverGPU::CopyBackToCPU() {
     cudaMemcpy(&m_Positions[0], dev_position, particleCount * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
