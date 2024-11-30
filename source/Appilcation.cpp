@@ -8,6 +8,7 @@ void ReshapeWrapper(int width, int height);
 void KeyBoardWrapper(unsigned char key, int x, int y);
 void SpecialWrapper(int key, int x, int y);
 void MouseWrapper(int button, int state, int x, int y);
+void MouseMotionWrapper(int x, int y);
 
 Application* appInstance = nullptr;
 
@@ -30,6 +31,7 @@ void Application::Initialize(int argc, char* argv[])
 	glutKeyboardFunc(KeyBoardWrapper);
 	glutSpecialFunc(SpecialWrapper);
 	glutMouseFunc(MouseWrapper);
+	glutMotionFunc(MouseMotionWrapper);
 
 	// Initialize the scene
 	m_Scene.LoadScene();
@@ -123,16 +125,37 @@ void Application::Mouse(int button, int state, int x, int y)
 {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 	{
-		// TODO - mouse left button down event
-		// Winston : I think this is where we can add the mouse interaction with the cloth
-		//Particle* p = m_Scene.GetParticleAtScreenPos(x, y);
-		//p->SetPosition()
-		//p->m_InvMass = 0.0f;
-
+		isMouseDown = true;
 	}
 	else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP)
 	{
-		// TODO - mouse left button up event
+		isMouseDown = false;
+		if (m_SelectedParticle)
+		{
+			m_SelectedParticle->m_InvMass = 1.0f;
+			m_SelectedParticle = nullptr;
+		}
+	}
+}
+
+void Application::MouseMotion(int x, int y)
+{
+	if (isMouseDown)
+	{
+		if (m_SelectedParticle)
+		{
+			m_SelectedParticle->SetPosition(m_Scene.getSolvers().front().get()->MouseToWorldZ0(x, y, selectedParticleZ));
+			m_Scene.getSolvers().front().get()->setSelectedParticlePosition(m_SelectedParticle);
+		}
+		else
+		{
+			m_SelectedParticle = m_Scene.getSolvers().front().get()->GetParticleAtScreenPos(x, y);
+			if (m_SelectedParticle != nullptr)
+			{
+				selectedParticleZ = m_SelectedParticle->m_Position.z;
+				m_SelectedParticle->m_InvMass = 0.0f;
+			}
+		}
 	}
 }
 
@@ -174,5 +197,13 @@ void MouseWrapper(int button, int state, int x, int y)
 	if (appInstance)
 	{
 		appInstance->Mouse(button, state, x, y);
+	}
+}
+
+void MouseMotionWrapper(int x, int y)
+{
+	if (appInstance)
+	{
+		appInstance->MouseMotion(x, y);
 	}
 }

@@ -209,3 +209,33 @@ void ClothSolverCPU::WriteBackPositions()
 		m_Particles[i]->SetPosition(m_Positions[i]);
 	}
 }
+
+Particle* ClothSolverCPU::GetParticleAtScreenPos(int mouseX, int mouseY)
+{
+	glm::vec3 worldPos = Mouse2World(mouseX, mouseY);
+	if (worldPos == glm::vec3(10, 10, 10)) return nullptr;
+
+	float minDistance = 1000000;
+	Particle* closestParticle = nullptr;
+	for (int i = 0; i < m_ParticlesNum; i++) {
+		float distance = glm::length(worldPos - m_Positions[i]);
+		if (distance < minDistance) {
+			minDistance = distance;
+			closestParticle = m_Particles[i];
+		}
+	}
+	return closestParticle;
+}
+
+void ClothSolverCPU::setSelectedParticlePosition(Particle* SelectedParticle)
+{
+	if (SelectedParticle == nullptr) return;
+	for (int i = 0; i < m_ParticlesNum; i++)
+	{
+		if (m_Particles[i] == SelectedParticle)
+		{
+			m_PredPositions[i] = SelectedParticle->GetPosition();
+			m_Positions[i] = SelectedParticle->GetPosition();
+		}
+	}
+}

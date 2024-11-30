@@ -14,6 +14,7 @@ public:
 	void Special(int key, int x, int y);
 	void Display(void);
 	void Mouse(int button, int state, int x, int y);
+	void MouseMotion(int x, int y);
 
 private:
 	ClothSimulation::Timer	m_Timer;
@@ -21,5 +22,8 @@ private:
 	int		m_Window;
 	bool	m_AppRunning;
 	Scene	m_Scene;
+	Particle* m_SelectedParticle;
+	bool isMouseDown = false;
+	float selectedParticleZ;
 };
 

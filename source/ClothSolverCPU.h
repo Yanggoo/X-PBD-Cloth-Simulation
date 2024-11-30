@@ -20,6 +20,9 @@ public:
 	void SolveBending(float deltaTime);
 	void SolveParticleCollision();
 	void WriteBackPositions();
+	//Screen functions
+	virtual Particle* GetParticleAtScreenPos(int mouseX, int mouseY)override;
+	virtual void setSelectedParticlePosition(Particle* SelectedParticle)override;
 
 
 	std::vector<glm::vec3> m_PredPositions;
