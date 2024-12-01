@@ -34,7 +34,8 @@ void Application::Initialize(int argc, char* argv[])
 	glutMotionFunc(MouseMotionWrapper);
 
 	// Initialize the scene
-	m_Scene.LoadScene();
+	//m_Scene.LoadSceneSphereAndCloth();
+	m_Scene.LoadSceneClothAndCloth();
 }
 
 void Application::Run()

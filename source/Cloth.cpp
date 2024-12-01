@@ -1,7 +1,7 @@
 #include "Cloth.h"
 #include <GL/glut.h>
 
-Cloth::Cloth(float width, float height, int num_width, int num_height) : m_NumWidth(num_width), m_NumHeight(num_height), m_Width(width), m_Height(height)
+Cloth::Cloth(float width, float height, int num_width, int num_height, bool fixed) : m_NumWidth(num_width), m_NumHeight(num_height), m_Width(width), m_Height(height), m_Fixed(fixed)
 {
 	assert(m_NumWidth > 1 && m_NumHeight > 1);
 	m_Particles.reserve(m_NumWidth * m_NumHeight);
@@ -9,8 +9,8 @@ Cloth::Cloth(float width, float height, int num_width, int num_height) : m_NumWi
 		for (int h = 0; h < m_NumHeight; h++) {
 			glm::vec3 pos = glm::vec3(w * (float)m_Width / (m_NumWidth - 1) - 0.5f * m_Width, -h * (float)m_Height / (m_NumHeight-1) + 0.5f * m_Height, 0.0f);
 			float inv_mass = 1.0f;
-			if ((h == 0) && (w == 0) ||
-				(h == 0) && (w == m_NumWidth - 1)) {
+			if (m_Fixed &&((h == 0) && (w == 0) ||
+				(h == 0) && (w == m_NumWidth - 1))) {
 				inv_mass = 0.0f; //fix only edge point
 			}
 			m_Particles.emplace_back(inv_mass, pos);

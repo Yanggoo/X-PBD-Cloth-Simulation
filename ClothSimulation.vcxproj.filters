@@ -48,6 +48,12 @@
     <ClCompile Include="source\ClothSolverBase.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="source\DynamicKDTreeCPU.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Cube.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Application.h">
@@ -88,6 +94,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="source\Globals.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="source\DynamicKDTreeCPU.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Cube.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -4,6 +4,7 @@
 #include "Collider.h"
 #include <tuple>
 #include "ClothSolverBase.h"
+#include "DynamicKDTreeCPU.h"
 
 class Cloth;
 class ClothSolverCPU : public ClothSolverBase
@@ -37,9 +38,11 @@ public:
 	const float m_BendCompliance = 0.5;
 	const float m_Damping = 1;
 	const float m_Epsilon = 1e-6;
+	const float m_MinDistanceBetweenParticles = 0.01;
 
 	std::vector<std::tuple<int, int, float>> m_StretchConstraints; // idx1, idx2, distance
 	std::vector<std::tuple<int, int, int, int, float>> m_BendingConstraints; // idx1, idx2, idx3, idx4, angle
+	DynamicKDTreeCPU m_KDTree;
 
 	//std::vector<std::tuple<Particle*, Particle*, Particle*, Particle*>> m_SelfCollisionConstraints; // idx1, triangle(idx2, idx3, idx4)
 	//std::vector<std::tuple<Particle*, glm::vec3>> m_AttachmentConstriants; // idx1, position

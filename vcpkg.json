@@ -1,6 +1,7 @@
 {
   "dependencies": [
     "freeglut",
-    "glm"
+    "glm",
+    "nanoflann"
   ]
 }

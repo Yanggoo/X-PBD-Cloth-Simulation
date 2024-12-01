@@ -10,7 +10,7 @@ class Cloth :
 	friend class ClothSolverCPU;
 	friend class ClothSolverGPU;
 public:
-	Cloth(float width, float height, int num_width, int num_height);
+	Cloth(float width, float height, int num_width, int num_height, bool fixed = false);
 	~Cloth();
 	void Update(float deltaTime) override;
 	void FixedUpdate(float deltaTime) override;
@@ -25,6 +25,7 @@ private:
 	int m_NumHeight;
 	float m_Width;
 	float m_Height;
+	bool m_Fixed = true;
 	std::vector<Particle> m_Particles;
 	ClothSolverBase* m_ClothSolver;
 };

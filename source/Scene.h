@@ -16,7 +16,8 @@ public:
 	void Update(float deltaTime);
 	void FixedUpdate(float deltaTime);
 	void Draw();
-	void LoadScene();
+	void LoadSceneSphereAndCloth();
+	void LoadSceneClothAndCloth();
 	std::vector<std::shared_ptr<ClothSolverBase>> getSolvers() { return m_Solvers; };
 private:
 	std::vector<std::shared_ptr<Actor>> m_Actors;

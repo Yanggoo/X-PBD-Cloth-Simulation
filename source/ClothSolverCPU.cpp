@@ -2,7 +2,7 @@
 #include <tuple>
 #include "Cloth.h"
 
-ClothSolverCPU::ClothSolverCPU()
+ClothSolverCPU::ClothSolverCPU() :m_ParticlesNum(0), m_IterationNum(5), m_Substeps(5), m_KDTree(m_PredPositions)
 {
 	m_Particles.resize(0);
 	m_Colliders.resize(0);
@@ -12,9 +12,6 @@ ClothSolverCPU::ClothSolverCPU()
 	m_StretchConstraints.resize(0);
 	m_BendingConstraints.resize(0);
 	m_Lambdas.resize(0);
-	m_ParticlesNum = 0;
-	m_IterationNum = 5;
-	m_Substeps = 5;
 }
 
 void ClothSolverCPU::ResponsibleFor(Cloth* cloth)
@@ -75,6 +72,7 @@ void ClothSolverCPU::Simulate(float deltaTime)
 	float deltaTimeInSubstep = deltaTime / m_Substeps;
 	for (int substep = 0; substep < m_Substeps; substep++) {
 		PredictPositions(deltaTimeInSubstep);
+		m_KDTree.rebuild();
 		for (int i = 0; i < m_IterationNum; i++)
 		{
 			SolveStretch(deltaTimeInSubstep);
@@ -199,7 +197,31 @@ void ClothSolverCPU::SolveBending(float deltaTime)
 
 void ClothSolverCPU::SolveParticleCollision()
 {
+	for (int i = 0; i < m_ParticlesNum; i++)
+	{
+		auto neighbors = m_KDTree.queryNeighbors(m_PredPositions[i], 8);
+		for (auto neighbor : neighbors)
+		{
+			//already checked
+			if (neighbor <= i) 
+				continue;
 
+			glm::vec3 p1p2 = m_PredPositions[i] - m_PredPositions[neighbor];
+			float currentDistance = glm::length(p1p2);
+			auto w1 = m_Particles[i]->m_InvMass;
+			auto w2 = m_Particles[neighbor]->m_InvMass;
+			if (currentDistance < m_MinDistanceBetweenParticles && w1+w2>0)
+			{
+				// alpha equals to 0, because stiffness is infinite
+				float C = currentDistance - m_MinDistanceBetweenParticles;
+				glm::vec3 gradientP1 = p1p2 / (currentDistance + m_Epsilon);
+				glm::vec3 gradientP2 = -p1p2 / (currentDistance + m_Epsilon);
+				float deltaLambda = -C / (w1 + w2);//should be /(w1*glm::lenth2(gradientP1)+...) But lenth2(gradientP1) equals to 1
+				m_PredPositions[i] += gradientP1 * deltaLambda * w1;
+				m_PredPositions[neighbor] += gradientP2 * deltaLambda * w2;
+			}
+		}
+	}
 }
 
 void ClothSolverCPU::WriteBackPositions()

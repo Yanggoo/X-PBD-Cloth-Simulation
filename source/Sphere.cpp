@@ -40,6 +40,8 @@ void Sphere::Draw()
 void Sphere::Initialize(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)
 {
 	Actor::Initialize(position, scale, rotation);
+	m_Position = position;
+	m_Radius = m_Radius * scale.x;
 }
 
 glm::vec3 Sphere::ComputeSDF(glm::vec3 position)
