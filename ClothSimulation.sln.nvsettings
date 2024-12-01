@@ -1,2 +1,2 @@
 [WarpWatch]
-Expressions=((__local__ float*) &pos)[0], ((__local__ float*) &pos)[1], ((__local__ float*) &pos)[2]
+Expressions=blockIdx, threadIdx

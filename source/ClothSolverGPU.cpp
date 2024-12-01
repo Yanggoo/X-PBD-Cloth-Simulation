@@ -55,7 +55,7 @@ void ClothSolverGPU::ResponsibleFor(Cloth* cloth) {
 
     threadsPerBlock = dim3(threadDimX, threadDimY, 1);
     blocksPerGrid = dim3(cloth->m_NumWidth / threadDimX, cloth->m_NumHeight / threadDimY, 1);
-    //blocksPerGrid = dim3(cloth->m_NumWidth + threadDimX - 1 / threadDimX, cloth->m_NumHeight + threadDimY-1 / threadDimY, 1);
+    //blocksPerGrid = dim3((cloth->m_NumWidth + threadsPerBlock.x - 1) / threadsPerBlock.x,(cloth->m_NumHeight + threadsPerBlock.y - 1) / threadsPerBlock.y, 1);
 
     particleCount = static_cast<size_t>(cloth->m_NumWidth) * cloth->m_NumHeight;
     cudaMalloc((void**)&dev_position, particleCount * sizeof(glm::vec3));
@@ -137,8 +137,12 @@ void ClothSolverGPU::Simulate(float deltaTime) {
             ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 0.1, 1);
             // NEEDFIX: IT SEEMS THAT IT MADE NO DIFFERENCE ON DEALING WITH DIFFERNET DIRECTIONS
             
-            //ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 0.1, 2);
-            //ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 0.1, 3);
+            ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 0.1, 2);
+            ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 0.1, 3);
+            
+            
+            auto alpha = 0.5 / deltaTime / deltaTime;
+            ClothSolver::SolveBendingConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_invMass, NumWidth, NumHeight, 0, 0.5, alpha, 0);
         }
                                                                                                                                                                 
         ClothSolver::UpdateVelocityAndWriteBack(blocksPerGrid, threadsPerBlock, dev_position, dev_predictPosition, dev_velocity, deltaTimeInSubstep, 0.1f, particleCount);
