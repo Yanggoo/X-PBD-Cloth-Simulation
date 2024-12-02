@@ -133,16 +133,16 @@ void ClothSolverGPU::Simulate(float deltaTime) {
         cudaDeviceSynchronize();
         for (int i = 0; i < m_IterationNum; i++) {
             // todo constrains
-            ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass,m_ConstraintDistances,NumWidth,NumHeight, particleCount,0.1, 0);
-            ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 0.1, 1);
+            ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass,m_ConstraintDistances,NumWidth,NumHeight, particleCount, 1e-6, 0);
+            ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 1e-6, 1);
             // NEEDFIX: IT SEEMS THAT IT MADE NO DIFFERENCE ON DEALING WITH DIFFERNET DIRECTIONS
             
-            ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 0.1, 2);
-            ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 0.1, 3);
+            ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 1e-6, 2);
+            ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_position, dev_invMass, m_ConstraintDistances, NumWidth, NumHeight, particleCount, 1e-6, 3);
             
             
-            auto alpha = 0.5 / deltaTime / deltaTime;
-            ClothSolver::SolveBendingConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_invMass, NumWidth, NumHeight, 0, 0.5, alpha, 0);
+            //auto alpha = 0.5 / deltaTime / deltaTime;
+            //ClothSolver::SolveBendingConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_invMass, NumWidth, NumHeight, 0, 0.5, alpha, 0);
         }
                                                                                                                                                                 
         ClothSolver::UpdateVelocityAndWriteBack(blocksPerGrid, threadsPerBlock, dev_position, dev_predictPosition, dev_velocity, deltaTimeInSubstep, 0.1f, particleCount);
