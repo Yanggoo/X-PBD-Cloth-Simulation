@@ -1,7 +1,7 @@
 #include "Cloth.h"
 #include <GL/glut.h>
 
-Cloth::Cloth(float width, float height, int num_width, int num_height, bool fixed) : m_NumWidth(num_width), m_NumHeight(num_height), m_Width(width), m_Height(height), m_Fixed(fixed)
+Cloth::Cloth(float width, float height, int num_width, int num_height, bool fixed, glm::vec3 color) : m_NumWidth(num_width), m_NumHeight(num_height), m_Width(width), m_Height(height), m_Fixed(fixed), m_Color(color)
 {
 	assert(m_NumWidth > 1 && m_NumHeight > 1);
 	m_Particles.reserve(m_NumWidth * m_NumHeight);
@@ -41,8 +41,11 @@ void Cloth::Draw()
 	glBegin(GL_TRIANGLES);
 	for (int w = 0; w < m_NumWidth - 1; w++) {
 		for (int h = 0; h < m_NumHeight - 1; h++) {
-			glm::vec3 col(1.0f, 0.6f, 0.6f);
-			if (w % 2 == h % 2) { col = glm::vec3(1.0f, 1.0f, 1.0f); }
+			glm::vec3 col = m_Color;
+			int wIdx = w * 6 / m_NumWidth;
+			int hIdx = h * 6 / m_NumHeight;
+			if (wIdx % 2 == hIdx % 2)
+			{ col = glm::vec3(1.0f, 1.0f, 1.0f); }
 			DrawTriangle(GetParticle(w + 1, h), GetParticle(w, h), GetParticle(w, h + 1), col);
 			DrawTriangle(GetParticle(w + 1, h + 1), GetParticle(w + 1, h), GetParticle(w, h + 1), col);
 		}

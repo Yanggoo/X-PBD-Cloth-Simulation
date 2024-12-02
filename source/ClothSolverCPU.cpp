@@ -51,13 +51,23 @@ void ClothSolverCPU::ResponsibleFor(Cloth* cloth)
 						(w + 1) * NumHeight + h + 1 + idxOffset,
 						glm::radians(0.0f)));
 				m_Lambdas.push_back(0.0f);
-				if (w < NumWidth - 1 && h < NumHeight - 1 && w>0)
-					m_BendingConstraints.push_back(
-						std::make_tuple((w - 1) * NumHeight + (h + 1) + idxOffset,
-							w * NumHeight + h + idxOffset,
-							w * NumHeight + (h + 1) + idxOffset,
-							(w + 1) * NumHeight + h + idxOffset,
-							glm::radians(0.0f)));
+			}
+			if (w < NumWidth - 1 && h < NumHeight - 1 && w>0) {
+				m_BendingConstraints.push_back(
+					std::make_tuple((w - 1) * NumHeight + (h + 1) + idxOffset,
+						w * NumHeight + h + idxOffset,
+						w * NumHeight + (h + 1) + idxOffset,
+						(w + 1) * NumHeight + h + idxOffset,
+						glm::radians(0.0f)));
+				m_Lambdas.push_back(0.0f);
+			}
+			if (w < NumWidth - 1 && h < NumHeight - 1 && h>0) {
+				m_BendingConstraints.push_back(
+					std::make_tuple((w + 1) * NumHeight + (h - 1) + idxOffset,
+						(w+1) * NumHeight + h + idxOffset,
+						w * NumHeight + h + idxOffset,
+						w * NumHeight + h+1 + idxOffset,
+						glm::radians(0.0f)));
 				m_Lambdas.push_back(0.0f);
 			}
 		}
@@ -67,7 +77,7 @@ void ClothSolverCPU::ResponsibleFor(Cloth* cloth)
 void ClothSolverCPU::Simulate(float deltaTime)
 {
 	CollideSDF(m_Positions);
-
+	fill(m_Lambdas.begin(), m_Lambdas.end(), 0.0f);
 	//Solve constrains
 	float deltaTimeInSubstep = deltaTime / m_Substeps;
 	for (int substep = 0; substep < m_Substeps; substep++) {
@@ -83,6 +93,8 @@ void ClothSolverCPU::Simulate(float deltaTime)
 		for (int i = 0; i < m_ParticlesNum; i++) {
 			m_Velocities[i] = (m_PredPositions[i] - m_Positions[i]) / deltaTimeInSubstep;
 			m_Velocities[i] = m_Velocities[i] * glm::clamp((1.0f - m_Damping * deltaTime), 0.0f, 1.0f);
+			if(glm::length(m_Velocities[i])>m_MaxVelecity)
+				m_Velocities[i] = glm::normalize(m_Velocities[i]) * m_MaxVelecity;
 			m_Positions[i] = m_PredPositions[i];
 		}
 	}
@@ -116,6 +128,9 @@ void ClothSolverCPU::CollideSDF(std::vector<glm::vec3>& position)
 			auto pos = position[i];
 			glm::vec3 correction = col->ComputeSDF(pos);
 			position[i] += correction;
+			glm::vec3 relativeVelocity = position[i] - m_Positions[i];
+			glm::vec3 friction = ComputeFriction(correction, relativeVelocity);
+			position[i] += friction;
 		}
 	}
 }
@@ -147,7 +162,7 @@ void ClothSolverCPU::SolveStretch(float deltaTime)
 
 void ClothSolverCPU::SolveBending(float deltaTime)
 {
-	float alpha = m_BendCompliance / deltaTime / deltaTime;
+	float alpha = m_BendCompliance / (deltaTime * deltaTime + m_Epsilon);
 	for (int i = 0; i < m_BendingConstraints.size(); i++) {
 		auto constrain = m_BendingConstraints[i];
 
@@ -164,10 +179,12 @@ void ClothSolverCPU::SolveBending(float deltaTime)
 		glm::vec3 p2 = m_PredPositions[idx2];
 		glm::vec3 p3 = m_PredPositions[idx3];
 		float angle = std::get<4>(constrain);
-		glm::vec3 n1 = glm::normalize(glm::cross(p2 - p0, p1 - p2));
-		glm::vec3 n2 = glm::normalize(glm::cross(p2 - p1, p3 - p2));
-		float d = glm::dot(n1, n2);
-		d = glm::clamp(d, 0.0f, 1.0f);
+		glm::vec3 n1 = glm::cross(p2 - p0, p1 - p2);
+		glm::vec3 n2 = glm::cross(p2 - p1, p3 - p2);
+		if (glm::length(n1) < m_Epsilon || glm::length(n2) < m_Epsilon) continue;
+		n1 = glm::normalize(n1);
+		n2 = glm::normalize(n2);
+		float d = glm::clamp(glm::dot(n1, n2), -1.0f, 1.0f);
 		float currentAngle = glm::acos(d);
 		if (abs(currentAngle - angle) < m_Epsilon || isnan(d)) continue;
 		if (w0 + w1 + w2 + w3 > 0) {
@@ -219,6 +236,12 @@ void ClothSolverCPU::SolveParticleCollision()
 				float deltaLambda = -C / (w1 + w2);//should be /(w1*glm::lenth2(gradientP1)+...) But lenth2(gradientP1) equals to 1
 				m_PredPositions[i] += gradientP1 * deltaLambda * w1;
 				m_PredPositions[neighbor] += gradientP2 * deltaLambda * w2;
+
+				glm::vec3 relativeVelocity = (m_PredPositions[i] - m_Positions[i]) 
+					- (m_PredPositions[neighbor] - m_Positions[neighbor]);
+				glm::vec3 friction = ComputeFriction(gradientP1 * deltaLambda, relativeVelocity);
+				m_PredPositions[i] += friction * w1;
+				m_PredPositions[neighbor] -= friction * w2;
 			}
 		}
 	}
