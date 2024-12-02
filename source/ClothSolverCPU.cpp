@@ -2,7 +2,7 @@
 #include <tuple>
 #include "Cloth.h"
 
-ClothSolverCPU::ClothSolverCPU() :m_ParticlesNum(0), m_IterationNum(5), m_Substeps(5), m_KDTree(m_PredPositions)
+ClothSolverCPU::ClothSolverCPU() :m_ParticlesNum(0), m_IterationNum(10), m_Substeps(5), m_KDTree(m_PredPositions)
 {
 	m_Particles.resize(0);
 	m_Colliders.resize(0);
@@ -11,6 +11,7 @@ ClothSolverCPU::ClothSolverCPU() :m_ParticlesNum(0), m_IterationNum(5), m_Subste
 	m_Velocities.resize(0);
 	m_StretchConstraints.resize(0);
 	m_BendingConstraints.resize(0);
+	m_ShirnkConstraints.resize(0);
 	m_Lambdas.resize(0);
 }
 
@@ -28,20 +29,74 @@ void ClothSolverCPU::ResponsibleFor(Cloth* cloth)
 			m_Positions.push_back(cloth->m_Particles[w * NumHeight + h].GetPosition());
 			m_Velocities.push_back(glm::vec3(0.0f));
 			m_ParticlesNum++;
+			int scale;
 			// Stretch Constraints
-			if (w < NumWidth - 1)
+			scale = 1;
+			if (w+scale < NumWidth)
 				m_StretchConstraints.push_back(
 					std::make_tuple(w * NumHeight + h + idxOffset,
-						(w + 1) * NumHeight + h + idxOffset,
+						(w + scale) * NumHeight + h + idxOffset,
 						glm::length(cloth->m_Particles[w * cloth->m_NumHeight + h].GetPosition()
-							- cloth->m_Particles[(w + 1) * cloth->m_NumHeight + h].GetPosition())));
-			if (h < NumHeight - 1)
+							- cloth->m_Particles[(w + scale) * cloth->m_NumHeight + h].GetPosition())));
+			if (h + scale < NumHeight)
 				m_StretchConstraints.push_back(
 					std::make_tuple(w * NumHeight + h + idxOffset,
-						w * NumHeight + h + 1 + idxOffset,
+						w * NumHeight + h + scale + idxOffset,
 						glm::length(cloth->m_Particles[w * cloth->m_NumHeight + h].GetPosition()
-							- cloth->m_Particles[w * cloth->m_NumHeight + h + 1].GetPosition())));
+							- cloth->m_Particles[w * cloth->m_NumHeight + h + scale].GetPosition())));
+			//Large Scale Stretch Constraints
+			scale = 2;
+			if (w + scale < NumWidth)
+				m_StretchConstraints.push_back(
+					std::make_tuple(w * NumHeight + h + idxOffset,
+						(w + scale) * NumHeight + h + idxOffset,
+						glm::length(cloth->m_Particles[w * cloth->m_NumHeight + h].GetPosition()
+							- cloth->m_Particles[(w + scale) * cloth->m_NumHeight + h].GetPosition())));
+			if (h + scale < NumHeight)
+				m_StretchConstraints.push_back(
+					std::make_tuple(w * NumHeight + h + idxOffset,
+						w * NumHeight + h + scale + idxOffset,
+						glm::length(cloth->m_Particles[w * cloth->m_NumHeight + h].GetPosition()
+							- cloth->m_Particles[w * cloth->m_NumHeight + h + scale].GetPosition())));
+			
+			//Large Scale Shrink Constraints
+			scale = 4;
+			if (w + scale < NumWidth)
+			{
+				m_ShirnkConstraints.push_back(
+					std::make_tuple(w * NumHeight + h + idxOffset,
+						(w + scale) * NumHeight + h + idxOffset,
+						glm::length(cloth->m_Particles[w * cloth->m_NumHeight + h].GetPosition()
+							- cloth->m_Particles[(w + scale) * cloth->m_NumHeight + h].GetPosition())));
+			}
+			if (h + scale < NumHeight)
+			{
+				m_ShirnkConstraints.push_back(
+					std::make_tuple(w * NumHeight + h + idxOffset,
+						w * NumHeight + h + scale + idxOffset,
+						glm::length(cloth->m_Particles[w * cloth->m_NumHeight + h].GetPosition()
+							- cloth->m_Particles[w * cloth->m_NumHeight + h + scale].GetPosition())));
+			}
+			scale = 8;
+			if (w + scale < NumWidth)
+			{
+				m_ShirnkConstraints.push_back(
+					std::make_tuple(w * NumHeight + h + idxOffset,
+						(w + scale) * NumHeight + h + idxOffset,
+						glm::length(cloth->m_Particles[w * cloth->m_NumHeight + h].GetPosition()
+							- cloth->m_Particles[(w + scale) * cloth->m_NumHeight + h].GetPosition())));
+			}
+			if (h + scale < NumHeight)
+			{
+				m_ShirnkConstraints.push_back(
+					std::make_tuple(w * NumHeight + h + idxOffset,
+						w * NumHeight + h + scale + idxOffset,
+						glm::length(cloth->m_Particles[w * cloth->m_NumHeight + h].GetPosition()
+							- cloth->m_Particles[w * cloth->m_NumHeight + h + scale].GetPosition())));
+			}
+		
 			// Bending Constraints
+			scale = 1;
 			if (w < NumWidth - 1 && h < NumHeight - 1)
 			{
 				m_BendingConstraints.push_back(
@@ -54,7 +109,30 @@ void ClothSolverCPU::ResponsibleFor(Cloth* cloth)
 			}
 
 			// Large Scale Bending Constraints
-			int scale = 10;
+			scale = 2;
+			if (w + scale < NumWidth && h + scale < NumHeight)
+			{
+				m_BendingConstraints.push_back(
+					std::make_tuple(w * NumHeight + h + idxOffset,
+						(w + scale) * NumHeight + h + idxOffset,
+						w * NumHeight + h + scale + idxOffset,
+						(w + scale) * NumHeight + h + scale + idxOffset,
+						glm::radians(0.0f)));
+				m_Lambdas.push_back(0.0f);
+			}
+
+			scale = 4;
+			if (w + scale < NumWidth && h + scale < NumHeight)
+			{
+				m_BendingConstraints.push_back(
+					std::make_tuple(w * NumHeight + h + idxOffset,
+						(w + scale) * NumHeight + h + idxOffset,
+						w * NumHeight + h + scale + idxOffset,
+						(w + scale) * NumHeight + h + scale + idxOffset,
+						glm::radians(0.0f)));
+				m_Lambdas.push_back(0.0f);
+			}
+			scale = 8;
 			if (w + scale < NumWidth && h + scale < NumHeight)
 			{
 				m_BendingConstraints.push_back(
@@ -72,15 +150,16 @@ void ClothSolverCPU::ResponsibleFor(Cloth* cloth)
 void ClothSolverCPU::Simulate(float deltaTime)
 {
 	CollideSDF(m_Positions);
-	fill(m_Lambdas.begin(), m_Lambdas.end(), 0.0f);
 	//Solve constrains
 	float deltaTimeInSubstep = deltaTime / m_Substeps;
 	for (int substep = 0; substep < m_Substeps; substep++) {
 		PredictPositions(deltaTimeInSubstep);
 		m_KDTree.rebuild();
+		fill(m_Lambdas.begin(), m_Lambdas.end(), 0.0f);
 		for (int i = 0; i < m_IterationNum; i++)
 		{
 			SolveStretch(deltaTimeInSubstep);
+			SolveShrink(deltaTimeInSubstep);
 			SolveBending(deltaTimeInSubstep);
 			SolveParticleCollision();
 			CollideSDF(m_PredPositions);
@@ -88,7 +167,7 @@ void ClothSolverCPU::Simulate(float deltaTime)
 		for (int i = 0; i < m_ParticlesNum; i++) {
 			m_Velocities[i] = (m_PredPositions[i] - m_Positions[i]) / deltaTimeInSubstep;
 			m_Velocities[i] = m_Velocities[i] * glm::clamp((1.0f - m_Damping * deltaTime), 0.0f, 1.0f);
-			if(glm::length(m_Velocities[i])>m_MaxVelecity)
+			if (glm::length(m_Velocities[i]) > m_MaxVelecity)
 				m_Velocities[i] = glm::normalize(m_Velocities[i]) * m_MaxVelecity;
 			m_Positions[i] = m_PredPositions[i];
 		}
@@ -104,7 +183,7 @@ void ClothSolverCPU::PredictPositions(float deltaTime)
 	{
 		if (m_Particles[i]->m_InvMass == 0.0f) continue;
 		glm::vec3 pos = m_Positions[i];
-		m_Velocities[i] += glm::vec3(0, -19.8, 0) * deltaTime;
+		m_Velocities[i] += glm::vec3(0, -m_Gravity, 0) * deltaTime;
 		//m_Velocities[i][0] = glm::clamp(m_Velocities[i][0], -10.f, 10.f);
 		//m_Velocities[i][1] = glm::clamp(m_Velocities[i][1], -10.f, 10.f);
 		//m_Velocities[i][2] = glm::clamp(m_Velocities[i][2], -10.f, 10.f);
@@ -155,6 +234,33 @@ void ClothSolverCPU::SolveStretch(float deltaTime)
 	}
 }
 
+void ClothSolverCPU::SolveShrink(float deltaTime)
+{
+	for (auto constrain : m_StretchConstraints) {
+		int idx1 = std::get<0>(constrain);
+		int idx2 = std::get<1>(constrain);
+		Particle* p1 = m_Particles[idx1];
+		Particle* p2 = m_Particles[idx2];
+		auto w1 = p1->m_InvMass;
+		auto w2 = p2->m_InvMass;
+		float distance = std::get<2>(constrain);
+		glm::vec3 p1p2 = m_PredPositions[idx1] - m_PredPositions[idx2];
+		float currentDistance = glm::length(p1p2);
+		if (currentDistance < distance && w1 + w2 > 0) {
+			// alpha equals to 0, because stiffness is infinite
+			float C = currentDistance - distance;
+			glm::vec3 gradientP1 = p1p2 / (currentDistance + m_Epsilon);
+			glm::vec3 gradientP2 = -p1p2 / (currentDistance + m_Epsilon);
+			float denominator = w1+ w2;
+			float deltaLambda = -C / (w1 + w2);
+			m_Lambdas[idx1] += deltaLambda;
+			m_PredPositions[idx1] += gradientP1 * deltaLambda * w1;
+			m_PredPositions[idx2] += gradientP2 * deltaLambda * w2;
+		}
+
+	}
+}
+
 void ClothSolverCPU::SolveBending(float deltaTime)
 {
 	float alpha = m_BendCompliance / (deltaTime * deltaTime + m_Epsilon);
@@ -197,7 +303,7 @@ void ClothSolverCPU::SolveBending(float deltaTime)
 				+ alpha;
 			if (denominator
 				< m_Epsilon) continue;
-			float deltaLambda = (-C-m_Lambdas[i]*alpha) / denominator;
+			float deltaLambda = (-C - m_Lambdas[i] * alpha) / denominator;
 			m_Lambdas[i] += deltaLambda;
 			m_PredPositions[idx0] += gradientP0 * deltaLambda * w0;
 			m_PredPositions[idx1] += gradientP1 * deltaLambda * w1;
