@@ -13,8 +13,16 @@ public:
 
     void ResponsibleFor(Cloth* cloth) override;
     void Simulate(float deltaTime) override;
+    void OnInitFinish() override;
 
 private:
+    struct ClothData {
+        dim3 blocksPerGrid;
+        dim3 threadsPerBlock;
+        int m_width;
+        int m_height;
+        int m_offset;
+    };
 
     void CopyBackToCPU();
     
@@ -23,24 +31,30 @@ private:
     int m_IterationNum;
     float m_ConstraintDistances;
 
-    int NumWidth;
-    int NumHeight;
+    int m_currentOffset;
+
+    //int NumWidth;
+    //int NumHeight;
 
     //std::vector<glm::vec3> m_PredPositions;
-    std::vector<glm::vec3> m_Positions;
+    std::vector<glm::vec3> host_position;
+    std::vector<glm::vec3> host_predictPosition;
+    std::vector<glm::vec3> host_velocity;
+    std::vector<float> host_invMass;
     //std::vector<glm::vec3> m_Velocities;
     std::vector<Particle*> m_Particles;
+
+    std::vector<ClothData> m_clothData;
 
     glm::vec3* dev_position;
     glm::vec3* dev_predictPosition;
     glm::vec3* dev_velocity;
     glm::float32* dev_invMass;
 
-    dim3 blocksPerGrid;
-    dim3 threadsPerBlock;
+    //dim3 blocksPerGrid;
+    //dim3 threadsPerBlock;
 
     const int threadDimX = 32;
     const int threadDimY = 32;
-
 };
 

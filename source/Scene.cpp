@@ -80,6 +80,7 @@ void Scene::LoadSceneSphereAndCloth()
 		assert(false);
 	}
 	cloth->AddSolver(solver.get());
+	solver->OnInitFinish();
 	m_Solvers.push_back(solver);
 }
 
@@ -116,5 +117,6 @@ void Scene::LoadSceneClothAndCloth()
 	}
 	cloth0->AddSolver(solver.get());
 	cloth1->AddSolver(solver.get());
+	solver->OnInitFinish();
 	m_Solvers.push_back(solver);
 }

@@ -177,6 +177,8 @@ void ClothSolverCPU::Simulate(float deltaTime)
 	WriteBackPositions();
 }
 
+void ClothSolverCPU::OnInitFinish() {}
+
 void ClothSolverCPU::PredictPositions(float deltaTime)
 {
 	for (int i = 0; i < m_ParticlesNum; i++)

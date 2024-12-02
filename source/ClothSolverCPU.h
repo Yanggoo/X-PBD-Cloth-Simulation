@@ -16,6 +16,7 @@ public:
 
 	void ResponsibleFor(Cloth* cloth) override;
 	void Simulate(float deltaTime) override;
+	void OnInitFinish() override;
 	void PredictPositions(float deltaTime);
 	void CollideSDF(std::vector<glm::vec3>& position);
 	void SolveStretch(float deltaTime);
