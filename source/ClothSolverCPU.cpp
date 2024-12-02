@@ -54,13 +54,14 @@ void ClothSolverCPU::ResponsibleFor(Cloth* cloth)
 			}
 
 			// Large Scale Bending Constraints
-			if (w +4 < NumWidth && h + 4 < NumHeight)
+			int scale = 10;
+			if (w + scale < NumWidth && h + scale < NumHeight)
 			{
 				m_BendingConstraints.push_back(
 					std::make_tuple(w * NumHeight + h + idxOffset,
-						(w + 4) * NumHeight + h + idxOffset,
-						w * NumHeight + h + 4 + idxOffset,
-						(w + 4) * NumHeight + h + 4 + idxOffset,
+						(w + scale) * NumHeight + h + idxOffset,
+						w * NumHeight + h + scale + idxOffset,
+						(w + scale) * NumHeight + h + scale + idxOffset,
 						glm::radians(0.0f)));
 				m_Lambdas.push_back(0.0f);
 			}
@@ -103,7 +104,7 @@ void ClothSolverCPU::PredictPositions(float deltaTime)
 	{
 		if (m_Particles[i]->m_InvMass == 0.0f) continue;
 		glm::vec3 pos = m_Positions[i];
-		m_Velocities[i] += glm::vec3(0, -9.8, 0) * deltaTime;
+		m_Velocities[i] += glm::vec3(0, -19.8, 0) * deltaTime;
 		//m_Velocities[i][0] = glm::clamp(m_Velocities[i][0], -10.f, 10.f);
 		//m_Velocities[i][1] = glm::clamp(m_Velocities[i][1], -10.f, 10.f);
 		//m_Velocities[i][2] = glm::clamp(m_Velocities[i][2], -10.f, 10.f);

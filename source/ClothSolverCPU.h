@@ -52,7 +52,7 @@ public:
 	int m_ParticlesNum;
 	int m_IterationNum;
 	int m_Substeps;
-	const float m_BendCompliance = 0.5;
+	const float m_BendCompliance = 0.01;
 	const float m_Damping = 1;
 	const float m_Epsilon = 1e-6;
 	const float m_MinDistanceBetweenParticles = 0.01;
