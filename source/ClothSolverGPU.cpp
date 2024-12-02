@@ -1,6 +1,8 @@
 #include "ClothSolverGPU.h"
 //#include <iostream>
 #include <stdio.h>
+#include "Sphere.h"
+#include "Cube.h"
 
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 
@@ -20,7 +22,7 @@ void checkCUDAError(const char* msg, int line = -1) {
 
 
 ClothSolverGPU::ClothSolverGPU() :
-    dev_position(nullptr), dev_predictPosition(nullptr), dev_velocity(nullptr), particleCount(0)
+    dev_position(nullptr), dev_predictPosition(nullptr), dev_velocity(nullptr), dev_invMass(nullptr), particleCount(0)
 {
     m_Substeps = 5;
     m_IterationNum = 5;
@@ -32,9 +34,8 @@ ClothSolverGPU::~ClothSolverGPU() {
     cudaFree(dev_velocity);
 }
 
-void ClothSolverGPU::ResponsibleFor(Cloth* cloth) {
-
-
+void ClothSolverGPU::ResponsibleFor(Cloth* cloth)
+{
     NumWidth = cloth->m_NumWidth;
     NumHeight = cloth->m_NumHeight;
     m_Particles.reserve(NumWidth * NumHeight);
@@ -143,6 +144,17 @@ void ClothSolverGPU::Simulate(float deltaTime) {
             
             //auto alpha = 0.5 / deltaTime / deltaTime;
             //ClothSolver::SolveBendingConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_invMass, NumWidth, NumHeight, 0, 0.5, alpha, 0);
+
+            for (size_t i = 0; i < m_Colliders.size(); i++) {
+                Collider* collider = m_Colliders[i];
+                if (Sphere* sphere = dynamic_cast<Sphere*>(collider)) {
+                    ClothSolver::SolveCollisionSphere(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_invMass, sphere->m_Position, sphere->m_Radius);
+                }
+                else if (Cube* cube = dynamic_cast<Cube*>(collider)) {
+                    ClothSolver::SolveCollisionCube(blocksPerGrid, threadsPerBlock, dev_predictPosition, dev_invMass, cube->m_Position, cube->m_Dimensions);
+                }
+            }
+            
         }
                                                                                                                                                                 
         ClothSolver::UpdateVelocityAndWriteBack(blocksPerGrid, threadsPerBlock, dev_position, dev_predictPosition, dev_velocity, deltaTimeInSubstep, 0.1f, particleCount);
