@@ -52,21 +52,15 @@ void ClothSolverCPU::ResponsibleFor(Cloth* cloth)
 						glm::radians(0.0f)));
 				m_Lambdas.push_back(0.0f);
 			}
-			if (w < NumWidth - 1 && h < NumHeight - 1 && w>0) {
+
+			// Large Scale Bending Constraints
+			if (w +4 < NumWidth && h + 4 < NumHeight)
+			{
 				m_BendingConstraints.push_back(
-					std::make_tuple((w - 1) * NumHeight + (h + 1) + idxOffset,
-						w * NumHeight + h + idxOffset,
-						w * NumHeight + (h + 1) + idxOffset,
-						(w + 1) * NumHeight + h + idxOffset,
-						glm::radians(0.0f)));
-				m_Lambdas.push_back(0.0f);
-			}
-			if (w < NumWidth - 1 && h < NumHeight - 1 && h>0) {
-				m_BendingConstraints.push_back(
-					std::make_tuple((w + 1) * NumHeight + (h - 1) + idxOffset,
-						(w+1) * NumHeight + h + idxOffset,
-						w * NumHeight + h + idxOffset,
-						w * NumHeight + h+1 + idxOffset,
+					std::make_tuple(w * NumHeight + h + idxOffset,
+						(w + 4) * NumHeight + h + idxOffset,
+						w * NumHeight + h + 4 + idxOffset,
+						(w + 4) * NumHeight + h + 4 + idxOffset,
 						glm::radians(0.0f)));
 				m_Lambdas.push_back(0.0f);
 			}
