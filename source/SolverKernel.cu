@@ -40,74 +40,7 @@ __global__ void kernSolveStretch(
     if (index >= numConstraints) return;
 
     int idx1 = -1, idx2 = -1;
-    //int idx1, idx2;
 
-
-        
-
-    //switch (updateDirection)
-    //{
-    //    //case 0: // Horizontal constraint
-    //    //    if (x + 1 >= numWidth) return; 
-    //    //    idx1 = index;
-    //    //    idx2 = index + 1;
-    //    //    break;
-
-    //    //case 1: // Vertical constraint
-    //    //    if (y + 1 >= numHeight) return; 
-    //    //    idx1 = index;
-    //    //    idx2 = index + numWidth; 
-
-    //    //    break;
-
-    //    //case 2: // Horizontal constraint(Even Row)
-    //    //    if ((y % 2 != 0) || x + 1 >= numWidth) return;
-    //    //    idx1 = index;
-    //    //    idx2 = index + 1;
-    //    //    break;
-
-    //    //case 3: // Vertical constraint(Odd col)
-    //    //    if ((y % 2 == 0) || y + 1 >= numHeight) return;
-    //    //    idx1 = index;
-    //    //    idx2 = index + numWidth;
-    //    //    break;
-
-    //    //default:
-    //    //    return; 
-
-
-
-    //    case 0: // Horizontal constraint
-    //        if ((x % 2 == 0) && (x + 1 < numWidth)) { // 确保右侧索引合法
-    //            idx1 = y * numWidth + x;         // 当前点
-    //            idx2 = y * numWidth + (x + 1);   // 右侧点
-    //        }
-    //        break;
-
-    //    case 1: // Vertical constraint
-    //        if ((x % 2 != 0) && (y + 1 < numHeight)) { // 确保下方索引合法
-    //            idx1 = y * numWidth + x;         // 当前点
-    //            idx2 = (y + 1)  * numWidth + x;   // 下方点
-    //        }
-    //        break;
-
-    //    case 2: // Horizontal constraint (Even Row)
-    //        if ((x % 2 != 0) && (x + 1 < numWidth)) {
-    //            idx1 = y * numWidth + x;         // 当前点
-    //            idx2 = y * numWidth + (x + 1);   // 右侧点
-    //        }
-    //        break;
-
-    //    case 3: // Vertical constraint (Odd Column)
-    //        if ((x % 2 == 0) && (y + 1 < numHeight)) {
-    //            idx1 = y * numWidth + x;         // 当前点
-    //            idx2 = (y + 1) * numWidth + x;   // 下方点
-    //        }
-    //        break;
-
-    //    default:
-    //        return; // 无效方向
-    //}
 
 
     if (updateDirection == 0) { // Horizontal constraint
@@ -117,7 +50,7 @@ __global__ void kernSolveStretch(
         }
     }
     else if (updateDirection == 1) { // Vertical constraint
-        if ((x % 2 != 0) && (y + 1 < numHeight)) { // 确保下方索引合法
+        if ((y % 2 == 0) && (y + 1 < numHeight)) { // 确保下方索引合法
             idx1 = y * numWidth + x;         // 当前点
             idx2 = (y + 1) * numWidth + x;   // 下方点
         }
@@ -129,7 +62,7 @@ __global__ void kernSolveStretch(
         }
     }
     else if (updateDirection == 3) { // Vertical constraint (Odd Column)
-        if ((x % 2 == 0) && (y + 1 < numHeight)) {
+        if ((y % 2 != 0) && (y + 1 < numHeight)) {
             idx1 = y * numWidth + x;         // 当前点
             idx2 = (y + 1) * numWidth + x;   // 下方点
         }
