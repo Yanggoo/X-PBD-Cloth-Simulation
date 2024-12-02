@@ -40,74 +40,7 @@ __global__ void kernSolveStretch(
     if (index >= numConstraints) return;
 
     int idx1 = -1, idx2 = -1;
-    //int idx1, idx2;
 
-
-        
-
-    //switch (updateDirection)
-    //{
-    //    //case 0: // Horizontal constraint
-    //    //    if (x + 1 >= numWidth) return; 
-    //    //    idx1 = index;
-    //    //    idx2 = index + 1;
-    //    //    break;
-
-    //    //case 1: // Vertical constraint
-    //    //    if (y + 1 >= numHeight) return; 
-    //    //    idx1 = index;
-    //    //    idx2 = index + numWidth; 
-
-    //    //    break;
-
-    //    //case 2: // Horizontal constraint(Even Row)
-    //    //    if ((y % 2 != 0) || x + 1 >= numWidth) return;
-    //    //    idx1 = index;
-    //    //    idx2 = index + 1;
-    //    //    break;
-
-    //    //case 3: // Vertical constraint(Odd col)
-    //    //    if ((y % 2 == 0) || y + 1 >= numHeight) return;
-    //    //    idx1 = index;
-    //    //    idx2 = index + numWidth;
-    //    //    break;
-
-    //    //default:
-    //    //    return; 
-
-
-
-    //    case 0: // Horizontal constraint
-    //        if ((x % 2 == 0) && (x + 1 < numWidth)) { // 确保右侧索引合法
-    //            idx1 = y * numWidth + x;         // 当前点
-    //            idx2 = y * numWidth + (x + 1);   // 右侧点
-    //        }
-    //        break;
-
-    //    case 1: // Vertical constraint
-    //        if ((x % 2 != 0) && (y + 1 < numHeight)) { // 确保下方索引合法
-    //            idx1 = y * numWidth + x;         // 当前点
-    //            idx2 = (y + 1)  * numWidth + x;   // 下方点
-    //        }
-    //        break;
-
-    //    case 2: // Horizontal constraint (Even Row)
-    //        if ((x % 2 != 0) && (x + 1 < numWidth)) {
-    //            idx1 = y * numWidth + x;         // 当前点
-    //            idx2 = y * numWidth + (x + 1);   // 右侧点
-    //        }
-    //        break;
-
-    //    case 3: // Vertical constraint (Odd Column)
-    //        if ((x % 2 == 0) && (y + 1 < numHeight)) {
-    //            idx1 = y * numWidth + x;         // 当前点
-    //            idx2 = (y + 1) * numWidth + x;   // 下方点
-    //        }
-    //        break;
-
-    //    default:
-    //        return; // 无效方向
-    //}
 
 
     if (updateDirection == 0) { // Horizontal constraint
@@ -117,7 +50,7 @@ __global__ void kernSolveStretch(
         }
     }
     else if (updateDirection == 1) { // Vertical constraint
-        if ((x % 2 != 0) && (y + 1 < numHeight)) { // 确保下方索引合法
+        if ((y % 2 == 0) && (y + 1 < numHeight)) { // 确保下方索引合法
             idx1 = y * numWidth + x;         // 当前点
             idx2 = (y + 1) * numWidth + x;   // 下方点
         }
@@ -129,7 +62,7 @@ __global__ void kernSolveStretch(
         }
     }
     else if (updateDirection == 3) { // Vertical constraint (Odd Column)
-        if ((x % 2 == 0) && (y + 1 < numHeight)) {
+        if ((y % 2 != 0) && (y + 1 < numHeight)) {
             idx1 = y * numWidth + x;         // 当前点
             idx2 = (y + 1) * numWidth + x;   // 下方点
         }
@@ -258,6 +191,65 @@ __global__ void kernSolveBendingConstraints(
 }
 
 
+__global__ void kernSolveCollisionSphere(glm::vec3* predPositions, const float* invMasses, glm::vec3 center, float radius)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+    int index = y * blockDim.x * gridDim.x + x;
+
+    if (invMasses[index] == 0.0f) {
+        return;
+    }
+
+    glm::vec3& position = predPositions[index];
+    glm::vec3 offset;
+    if (glm::length(position - center) < 0.1f + radius) {
+        offset = glm::normalize(position - center) * (0.1f + radius - glm::length(position - center));
+    }
+    else {
+        offset = glm::vec3(0.0f);
+    }
+
+    position += offset;
+}
+
+__global__ void kernSolveCollisionCube(glm::vec3* predPositions, const float* invMasses, glm::vec3 center, glm::vec3 dimensions)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+    int index = y * blockDim.x * gridDim.x + x;
+
+    if (invMasses[index] == 0.0f) {
+        return;
+    }
+
+    glm::vec3& position = predPositions[index];
+    glm::vec3 offset;
+    glm::vec3 halfExtents = dimensions * 0.5f;
+    glm::vec3 diff = position - center;
+    if (diff.x > -halfExtents.x && diff.x<halfExtents.x
+        && diff.y>-halfExtents.y && diff.y < halfExtents.y
+        && diff.z>-halfExtents.z && diff.z < halfExtents.z) {
+        float dx = diff.x > 0 ? halfExtents.x + 0.01 - diff.x : -halfExtents.x - 0.01 - diff.x;
+        float dy = diff.y > 0 ? halfExtents.y + 0.01 - diff.y : -halfExtents.y - 0.01 - diff.y;
+        float dz = diff.z > 0 ? halfExtents.z + 0.01 - diff.z : -halfExtents.z - 0.01 - diff.z;
+        if (abs(dx) <= abs(dy) && abs(dx) <= abs(dz)) {
+            offset = glm::vec3(dx, 0.0f, 0.0f);
+        }
+        else if (abs(dy) <= abs(dx) && abs(dy) <= abs(dz)) {
+            offset = glm::vec3(0.0f, dy, 0.0f);
+        }
+        else {
+            offset = glm::vec3(0.0f, 0.0f, dz);
+        }
+    }
+    else {
+        offset = glm::vec3(0.0f);
+    }
+    
+    position += offset;
+}
+
 
 __global__ void updateVelocityAndWriteBack(
     glm::vec3* position,
@@ -299,5 +291,12 @@ void ClothSolver::SolveBendingConstraints(dim3 blocksPerGrid, dim3 threadsPerBlo
 	//cudaDeviceSynchronize();
 }
 
+void ClothSolver::SolveCollisionSphere(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, glm::vec3 center, float radius) 
+{
+    kernSolveCollisionSphere << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, center, radius);
+}
 
+void ClothSolver::SolveCollisionCube(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, glm::vec3 center, glm::vec3 dimensions) {
+    kernSolveCollisionCube << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, center, dimensions);
+}
 
