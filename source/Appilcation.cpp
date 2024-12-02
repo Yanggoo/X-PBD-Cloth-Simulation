@@ -1,8 +1,11 @@
 #include "Application.h"
 #include <GL/freeglut.h>
 #include "Timer.h"
+#include "imgui.h"
+#include "imgui_impl_opengl2.h"
+#include "imgui_impl_glut.h"
 
-// Forward declaration of the static display function
+// Forward declaration of the static display functions
 void DisplayWrapper();
 void ReshapeWrapper(int width, int height);
 void KeyBoardWrapper(unsigned char key, int x, int y);
@@ -14,18 +17,17 @@ Application* appInstance = nullptr;
 
 void Application::Initialize(int argc, char* argv[])
 {
-	//Config OpenGL
+	// Configure OpenGL
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
 	glutInitWindowSize(640, 480);
 	glutCreateWindow("Cloth Simulation");
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	//glEnable(GL_CULL_FACE);
-	
+
 	// Set the global instance pointer to this instance
 	appInstance = this;
-	
-	// Register the event callback function
+
+	// Register event callback functions
 	glutDisplayFunc(DisplayWrapper);
 	glutReshapeFunc(ReshapeWrapper);
 	glutKeyboardFunc(KeyBoardWrapper);
@@ -35,7 +37,32 @@ void Application::Initialize(int argc, char* argv[])
 
 	// Initialize the scene
 	m_Scene.LoadSceneSphereAndCloth();
-	//m_Scene.LoadSceneClothAndCloth();
+	// m_Scene.LoadSceneClothAndCloth();
+
+	// Initialize ImGui
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.Fonts->AddFontDefault();
+	ImGui_ImplGLUT_Init();
+	ImGui_ImplGLUT_InstallFuncs();
+	ImGui_ImplOpenGL2_Init();
+
+	// Restore OpenGL state
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glViewport(0, 0, 640, 480);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_LIGHTING);
+
+	// Re-register callback functions after ImGui installation
+	glutDisplayFunc(DisplayWrapper);
+	glutReshapeFunc(ReshapeWrapper);
+	glutKeyboardFunc(KeyBoardWrapper);
+	glutSpecialFunc(SpecialWrapper);
+	glutMouseFunc(MouseWrapper);
+	glutMotionFunc(MouseMotionWrapper);
 }
 
 void Application::Run()
@@ -51,15 +78,17 @@ void Application::Run()
 
 void Application::End()
 {
-
+	ImGui_ImplOpenGL2_Shutdown();
+	ImGui_ImplGLUT_Shutdown();
+	ImGui::DestroyContext();
 }
 
 void Application::Reshape(int width, int height)
 {
-	static GLfloat lightPosition[4] = { 0.0f,  2.5f,  5.5f, 1.0f };
-	static GLfloat lightDiffuse[3] = { 1.0f,  1.0f,  1.0f };
+	static GLfloat lightPosition[4] = { 0.0f, 2.5f, 5.5f, 1.0f };
+	static GLfloat lightDiffuse[3] = { 1.0f, 1.0f, 1.0f };
 	static GLfloat lightAmbient[3] = { 0.25f, 0.25f, 0.25f };
-	static GLfloat lightSpecular[3] = { 1.0f,  1.0f,  1.0f };
+	static GLfloat lightSpecular[3] = { 1.0f, 1.0f, 1.0f };
 
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
@@ -74,12 +103,16 @@ void Application::Reshape(int width, int height)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	gluLookAt(0.0f, 0.0f, 5.0f, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0); // pos, tgt, up
+	gluLookAt(0.0f, 0.0f, 5.0f, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+
+	// Update ImGui DisplaySize
+	ImGuiIO& io = ImGui::GetIO();
+	io.DisplaySize = ImVec2((float)width, (float)height);
 }
 
 void Application::Idle(void)
@@ -95,7 +128,6 @@ void Application::Idle(void)
 
 void Application::KeyBoard(unsigned char key, int x, int y)
 {
-	// Implementation of KeyBoard
 	if (key == 27)
 	{
 		m_AppRunning = false;
@@ -119,11 +151,43 @@ void Application::Display(void)
 
 	m_Scene.Draw();
 
+	// ImGui rendering
+	ImGui_ImplOpenGL2_NewFrame();
+	ImGui_ImplGLUT_NewFrame();
+	ImGui::NewFrame();
+
+	// Set GUI window position to the top-left corner
+	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+
+	// Optionally set window size
+	ImGui::SetNextWindowSize(ImVec2(230, 80), ImGuiCond_Always);
+
+	// Render ImGui window
+	ImGui::Begin("Scene Selector", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+	if (ImGui::Button("Load Sphere and Cloth Scene"))
+	{
+		m_Scene.LoadSceneSphereAndCloth();
+	}
+	if (ImGui::Button("Load Cloth and Cloth Scene"))
+	{
+		m_Scene.LoadSceneClothAndCloth();
+	}
+	ImGui::End();
+
+	ImGui::Render();
+	ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+
 	glutSwapBuffers();
 }
 
 void Application::Mouse(int button, int state, int x, int y)
 {
+	ImGuiIO& io = ImGui::GetIO();
+	if (io.WantCaptureMouse)
+	{
+		return;
+	}
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 	{
 		isMouseDown = true;
@@ -195,10 +259,17 @@ void SpecialWrapper(int key, int x, int y)
 
 void MouseWrapper(int button, int state, int x, int y)
 {
-	if (appInstance)
-	{
+	ImGuiIO& io = ImGui::GetIO();
+
+	io.MousePos = ImVec2((float)x, (float)y);
+
+	if (button == GLUT_LEFT_BUTTON)
+		io.MouseDown[0] = (state == GLUT_DOWN);
+	else if (button == GLUT_RIGHT_BUTTON)
+		io.MouseDown[1] = (state == GLUT_DOWN);
+
+	if (!io.WantCaptureMouse && appInstance)
 		appInstance->Mouse(button, state, x, y);
-	}
 }
 
 void MouseMotionWrapper(int x, int y)

@@ -102,6 +102,8 @@
     <ClCompile Include="source\ClothSolverCPU.cpp" />
     <ClCompile Include="source\Cloth.cpp" />
     <ClCompile Include="source\Actor.cpp" />
+    <ClCompile Include="source\imgui_impl_glut.cpp" />
+    <ClCompile Include="source\imgui_impl_opengl2.cpp" />
     <ClCompile Include="source\Scene.cpp" />
     <ClCompile Include="source\Appilcation.cpp" />
     <ClCompile Include="source\main.cpp" />
@@ -116,6 +118,8 @@
     <ClInclude Include="source\Collider.h" />
     <ClInclude Include="source\ClothSolverCPU.h" />
     <ClInclude Include="source\Globals.h" />
+    <ClInclude Include="source\imgui_impl_glut.h" />
+    <ClInclude Include="source\imgui_impl_opengl2.h" />
     <ClInclude Include="source\Particle.h" />
     <ClInclude Include="source\Cloth.h" />
     <ClInclude Include="source\Actor.h" />

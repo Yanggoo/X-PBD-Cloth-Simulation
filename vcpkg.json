@@ -2,6 +2,7 @@
   "dependencies": [
     "freeglut",
     "glm",
-    "nanoflann"
+    "nanoflann",
+    "imgui"
   ]
 }

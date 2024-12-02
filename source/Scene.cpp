@@ -54,6 +54,8 @@ void Scene::Draw()
 
 void Scene::LoadSceneSphereAndCloth()
 {
+	m_Actors.clear();
+	m_Solvers.clear();
 	std::shared_ptr<Sphere> sphere = std::make_shared<Sphere>(0.1f);
 	sphere->Initialize(glm::vec3(0, 0, 1), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(sphere);
@@ -83,6 +85,8 @@ void Scene::LoadSceneSphereAndCloth()
 
 void Scene::LoadSceneClothAndCloth()
 {
+	m_Actors.clear();
+	m_Solvers.clear();
 	std::shared_ptr<Cube> platform = std::make_shared<Cube>(3,0.2,0.2);
 	platform->Initialize(glm::vec3(0,-1, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(platform);

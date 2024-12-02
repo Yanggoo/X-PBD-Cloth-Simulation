@@ -53,14 +53,14 @@ public:
 	int m_ParticlesNum;
 	int m_IterationNum;
 	int m_Substeps;
-	const float m_BendCompliance = 0.01;
+	const float m_BendCompliance = 0.5;
 	const float m_ShrinkCompliance = 0.0001;
 	const float m_Damping = 1;
 	const float m_Epsilon = 1e-6;
 	const float m_MinDistanceBetweenParticles = 0.01;
 	const float m_Friction = 0.1f;
 	const float m_MaxVelecity = 10.0f;
-	const float m_Gravity = 9.8;
+	const float m_Gravity = 30.f;
 
 	std::vector<std::tuple<int, int, float>> m_StretchConstraints; // idx1, idx2, distance
 	std::vector<std::tuple<int, int, float>> m_ShirnkConstraints; // idx1, idx2, distance
