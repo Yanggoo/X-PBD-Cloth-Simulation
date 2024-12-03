@@ -198,6 +198,7 @@ void Application::Mouse(int button, int state, int x, int y)
 		if (m_SelectedParticle)
 		{
 			m_SelectedParticle->m_InvMass = 1.0f;
+			m_Scene.getSolvers().front()->OnInputClearParticle(m_SelectedParticle);
 			m_SelectedParticle = nullptr;
 		}
 	}
@@ -220,6 +221,8 @@ void Application::MouseMotion(int x, int y)
 				selectedParticleZ = m_SelectedParticle->m_Position.z;
 				m_SelectedParticle->m_InvMass = 0.0f;
 			}
+
+			m_Scene.getSolvers().front()->OnInputSelectParticle(m_SelectedParticle);
 		}
 	}
 }

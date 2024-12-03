@@ -17,6 +17,8 @@ public:
     virtual glm::vec3 MouseToWorldZ0(int mouseX, int mouseY, float particleZ);
 	virtual Particle* GetParticleAtScreenPos(int mouseX, int mouseY);
 	virtual void setSelectedParticlePosition(Particle* SelectedParticle);
+    virtual void OnInputSelectParticle(Particle* SelectedParticle);
+    virtual void OnInputClearParticle(Particle* SelectedParticle);
     std::vector<Collider*> m_Colliders;
 };
 

@@ -14,6 +14,10 @@ public:
     void ResponsibleFor(Cloth* cloth) override;
     void Simulate(float deltaTime) override;
     void OnInitFinish() override;
+    Particle* GetParticleAtScreenPos(int mouseX, int mouseY) override;
+    void setSelectedParticlePosition(Particle* SelectedParticle) override;
+    void OnInputSelectParticle(Particle* SelectedParticle) override;
+    void OnInputClearParticle(Particle* SelectedParticle) override;
 
 private:
     struct ClothData {

@@ -163,6 +163,57 @@ void ClothSolverGPU::OnInitFinish() {
     cudaDeviceSynchronize();
 }
 
+Particle* ClothSolverGPU::GetParticleAtScreenPos(int mouseX, int mouseY) {
+    glm::vec3 worldPos = Mouse2World(mouseX, mouseY);
+    if (worldPos == glm::vec3(10, 10, 10)) return nullptr;
+
+    float minDistance = 1000000;
+    Particle* closestParticle = nullptr;
+    for (int i = 0; i < particleCount; i++) {
+        float distance = glm::length(worldPos - host_position[i]);
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestParticle = m_Particles[i];
+        }
+    }
+    return closestParticle;
+}
+
+void ClothSolverGPU::setSelectedParticlePosition(Particle* SelectedParticle) {
+    if (SelectedParticle == nullptr) return;
+    for (int i = 0; i < particleCount; i++) {
+        if (m_Particles[i] == SelectedParticle) {
+            glm::vec3 position = SelectedParticle->GetPosition();
+            //m_PredPositions[i] = SelectedParticle->GetPosition();
+            //m_Positions[i] = SelectedParticle->GetPosition();
+            cudaMemcpy(dev_position + i, &position, sizeof(glm::vec3), cudaMemcpyHostToDevice);
+            cudaMemcpy(dev_predictPosition + i, &position, sizeof(glm::vec3), cudaMemcpyHostToDevice);
+        }
+    }
+
+    cudaDeviceSynchronize();
+}
+
+void ClothSolverGPU::OnInputSelectParticle(Particle* SelectedParticle) {
+    if (SelectedParticle == nullptr) return;
+    for (int i = 0; i < particleCount; i++) {
+        if (m_Particles[i] == SelectedParticle) {
+            float invMass = 0.0f;
+            cudaMemcpy(dev_invMass + i, &invMass, sizeof(float), cudaMemcpyHostToDevice);
+        }
+    }
+}
+
+void ClothSolverGPU::OnInputClearParticle(Particle* SelectedParticle) {
+    if (SelectedParticle == nullptr) return;
+    for (int i = 0; i < particleCount; i++) {
+        if (m_Particles[i] == SelectedParticle) {
+            float invMass = 1.0f;
+            cudaMemcpy(dev_invMass + i, &invMass, sizeof(float), cudaMemcpyHostToDevice);
+        }
+    }
+}
+
 
 void ClothSolverGPU::CopyBackToCPU() {
     cudaMemcpy(&host_position[0], dev_position, particleCount * sizeof(glm::vec3), cudaMemcpyDeviceToHost);

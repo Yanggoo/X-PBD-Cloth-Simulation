@@ -93,3 +93,7 @@ void ClothSolverBase::setSelectedParticlePosition(Particle* SelectedParticle)
 	//TO DO: Implement this function for GPU solver
 	std::cerr << "TO DO: Implement this function for GPU solver!" << std::endl;
 }
+
+void ClothSolverBase::OnInputSelectParticle(Particle* SelectedParticle) {}
+
+void ClothSolverBase::OnInputClearParticle(Particle* SelectedParticle) {}
