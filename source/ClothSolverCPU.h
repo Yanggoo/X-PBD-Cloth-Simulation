@@ -50,11 +50,11 @@ public:
 	std::vector<glm::vec3> m_Velocities;
 	std::vector<Particle*> m_Particles;
 	//std::vector<Collider*> m_Colliders;
-	std::vector<float>m_Lambdas;
+	//std::vector<float>m_Lambdas;
 	int m_ParticlesNum;
 	int m_IterationNum;
 	int m_Substeps;
-	const float m_BendCompliance = 0.5;
+	const float m_BendCompliance = 10;
 	const float m_ShrinkCompliance = 0.0001;
 	const float m_Damping = 1;
 	const float m_Epsilon = 1e-6;

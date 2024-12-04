@@ -202,6 +202,15 @@ void Application::Mouse(int button, int state, int x, int y)
 			m_SelectedParticle = nullptr;
 		}
 	}
+	else if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
+	{
+		isMouseDown = false;
+		if (m_SelectedParticle)
+		{
+			m_SelectedParticle->m_InvMass = 0.0f;
+			m_SelectedParticle = nullptr;
+		}
+	}
 }
 
 void Application::MouseMotion(int x, int y)

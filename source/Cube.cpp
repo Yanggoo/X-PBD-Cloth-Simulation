@@ -45,7 +45,7 @@ void Cube::Initialize(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)
 
 glm::vec3 Cube::ComputeSDF(glm::vec3 position)
 {
-	glm::vec3 halfExtents = m_Dimensions * 0.5f;
+	glm::vec3 halfExtents = m_Dimensions * 0.5f+0.1f;
 	glm::vec3 diff = position - m_Position;
 	if (diff.x > -halfExtents.x && diff.x<halfExtents.x
 		&& diff.y>-halfExtents.y && diff.y < halfExtents.y
