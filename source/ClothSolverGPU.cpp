@@ -105,6 +105,8 @@ void ClothSolverGPU::Simulate(float deltaTime) {
             ClothSolver::CalculatePredictPosition(blocksPerGrid, threadsPerBlock, dev_position + offset, dev_predictPosition + offset, dev_invMass + offset, dev_velocity + offset, deltaTimeInSubstep);
             cudaDeviceSynchronize();
             for (int i = 0; i < m_IterationNum; i++) {
+
+                //dim3 smallBlocksPerGrid = dim3(blocksPerGrid.x / 2, blocksPerGrid.y / 2, blocksPerGrid.z);
                 // todo constrains
                 ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 0);
                 ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 1);
@@ -112,8 +114,8 @@ void ClothSolverGPU::Simulate(float deltaTime) {
                 ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 3);
 
                 auto alpha = 0.5 / (deltaTime * deltaTime + 1e-6);
-                dim3 smallBlocksPerGrid = dim3(blocksPerGrid.x/2,blocksPerGrid.y/2,blocksPerGrid.z);
-                ClothSolver::SolveBendingConstraints(smallBlocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_invMass + offset, dev_lambdas + offset, width, height, 0.0, 0.5, alpha, 1e-6);
+                //dim3 smallBlocksPerGrid = dim3(blocksPerGrid.x/2,blocksPerGrid.y/2,blocksPerGrid.z);
+                //ClothSolver::SolveBendingConstraints(smallBlocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_invMass + offset, dev_lambdas + offset, width, height, 0.0, 0.5, alpha, 1e-6);
 
                 for (size_t i = 0; i < m_Colliders.size(); i++) {
                     Collider* collider = m_Colliders[i];

@@ -42,68 +42,70 @@ __global__ void kernSolveStretch(
 
 
 
-    if (updateDirection == 0) { // Horizontal constraint
-        if ((x % 2 == 0) && (x + 1 < numWidth)) { // Within index range
-            idx1 = y * numWidth + x;         // Current
-            idx2 = y * numWidth + (x + 1);   // Right
-        }
-    }
-    else if (updateDirection == 1) { // Vertical constraint
-        if ((y % 2 == 0) && (y + 1 < numHeight)) { 
-            idx1 = y * numWidth + x;         // Current
-            idx2 = (y + 1) * numWidth + x;   // Under
-        }
-    }
-    else if (updateDirection == 2) { // Horizontal constraint (Odd Row)
-        if ((x % 2 != 0) && (x + 1 < numWidth)) {
-            idx1 = y * numWidth + x;         // Current
-            idx2 = y * numWidth + (x + 1);   // Right
-        }
-    }
-    else if (updateDirection == 3) { // Vertical constraint (Odd Column)
-        if ((y % 2 != 0) && (y + 1 < numHeight)) {
-            idx1 = y * numWidth + x;         // Current
-            idx2 = (y + 1) * numWidth + x;   // Under
-        }
-    }
-    else {
-        return;
-    }
-
-
-
-#pragma region Possible Optimization For Each Threads Call (NEEDFIX)
     //if (updateDirection == 0) { // Horizontal constraint
-    //    // Check if x is even and if there is space for two indices
-    //    if (2 * x + 1 < numWidth - 1) {
-    //        idx1 = y * numWidth + 2 * x;        // Current
-    //        idx2 = y * numWidth + 2 * x + 1;    // Right
+    //    if ((x % 2 == 0) && (x + 1 < numWidth)) { // Within index range
+    //        idx1 = y * numWidth + x;         // Current
+    //        idx2 = y * numWidth + (x + 1);   // Right
     //    }
     //}
     //else if (updateDirection == 1) { // Vertical constraint
-    //    // Check if y is even and if there is space for two indices
-    //    if (2 * y + 1 < numHeight - 1) {
-    //        idx1 = 2 * y * numWidth + x;       // Current
-    //        idx2 = (2 * y + 1) * numWidth + x; // Down
+    //    if ((y % 2 == 0) && (y + 1 < numHeight)) { 
+    //        idx1 = y * numWidth + x;         // Current
+    //        idx2 = (y + 1) * numWidth + x;   // Under
     //    }
     //}
     //else if (updateDirection == 2) { // Horizontal constraint (Odd Row)
-    //    // Check if x is odd and if there is space for two indices
-    //    if (2 * x + 2 < numWidth) {
-    //        idx1 = y * numWidth + 2 * x + 1;    // Current
-    //        idx2 = y * numWidth + 2 * x + 2;    // Right
+    //    if ((x % 2 != 0) && (x + 1 < numWidth)) {
+    //        idx1 = y * numWidth + x;         // Current
+    //        idx2 = y * numWidth + (x + 1);   // Right
     //    }
     //}
     //else if (updateDirection == 3) { // Vertical constraint (Odd Column)
-    //    // Check if y is odd and if there is space for two indices
-    //    if (2 * y + 2 < numHeight) {
-    //        idx1 = 2 * y * numWidth + x;       // Current
-    //        idx2 = (2 * y + 2) * numWidth + x; // Down
+    //    if ((y % 2 != 0) && (y + 1 < numHeight)) {
+    //        idx1 = y * numWidth + x;         // Current
+    //        idx2 = (y + 1) * numWidth + x;   // Under
     //    }
     //}
     //else {
-    //    return; // Invalid update direction
+    //    return;
     //}
+
+
+#pragma region Optimization For Each Threads Call
+    if (updateDirection == 0) { // Horizontal constraint
+        // Check if x is even and if there is space for two indices
+        if (2 * x + 1 <= numWidth - 1) {
+            idx1 = y * numWidth + 2 * x;        // Current
+            idx2 = y * numWidth + 2 * x + 1;    // Right
+        }
+
+    }
+    else if (updateDirection == 1) { // Vertical constraint
+        // Check if y is even and if there is space for two indices
+        if (2 * y + 1 <= numHeight - 1) {
+            idx1 = 2 * y * numWidth + x;       // Current
+            idx2 = (2 * y + 1) * numWidth + x; // Down
+        }
+
+    }
+    else if (updateDirection == 2) { // Horizontal constraint (Odd Row)
+        // Check if x is odd and if there is space for two indices
+        if (2 * x + 2 < numWidth) {
+            idx1 = y * numWidth + 2 * x + 1;    // Current
+            idx2 = y * numWidth + 2 * x + 2;    // Right
+        }
+    }
+    else if (updateDirection == 3) { // Vertical constraint (Odd Column)
+        // Check if y is odd and if there is space for two indices
+        if (2 * y + 2 < numHeight) {
+            idx1 = (2 * y + 1) * numWidth + x;       // Current
+            idx2 = (2 * y + 2) * numWidth + x; // Down
+        }
+
+    }
+    else {
+        return; // Invalid update direction
+    }
 #pragma endregion
 
 
@@ -146,15 +148,16 @@ __global__ void kernSolveBendingConstraints(
     float* lambdas,
     const int numWidth,           // Number of particles along width
     const int numHeight,          // Number of particles along height
-    const float constraintAngle, 
+    const float constraintAngle,
     const float compliance,       // Compliance parameter
-    float alpha,              
-    float epsilon)                // Small value to prevent division by zero
+    float alpha,
+    float epsilon,
+    int pos)                // Small value to prevent division by zero
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (x>=numWidth||y>=numHeight)
+    if (x >= numWidth || y >= numHeight)
     {
         return;
     }
@@ -162,13 +165,44 @@ __global__ void kernSolveBendingConstraints(
     int index = y * blockDim.x * gridDim.x + x;
 
     // Each thread works on a single constraint
-    int totalConstraints = (numWidth - 1) * (numHeight - 1); // Total number of constraints
+    int totalConstraints = (numWidth + 1) * (numHeight - 1); // Total number of constraints
     if (index >= totalConstraints) return;
 
-    int idx0 = 2* (y * numWidth + x);
-    int idx1 = 2* (y * numWidth + x + 1);
-    int idx2 = 2* ((y + 1) * numWidth + x);
-    int idx3 = 2* ((y + 1) * numWidth + x + 1);
+    int idx0 = -1, idx1 = -1, idx2 = -1, idx3 = -1;
+
+    if (pos == 0)
+    {
+        idx0 = 2 * (y * numWidth + x);
+        idx1 = 2 * (y * numWidth + x + 1);
+        idx2 = 2 * ((y + 1) * numWidth + x);
+        idx3 = 2 * ((y + 1) * numWidth + x + 1);
+    }
+    else if (pos == 1)
+    {
+        idx0 = 2 * (y * numWidth + x + 1);
+        idx1 = 2 * (y * numWidth + x + 2);
+        idx2 = 2 * ((y + 1) * numWidth + x + 1);
+        idx3 = 2 * ((y + 1) * numWidth + x + 2);
+    }
+    else if (pos == 2)
+    {
+        idx0 = 2 * ((y + 1) * numWidth + x);
+        idx1 = 2 * ((y + 1) * numWidth + x + 1);
+        idx2 = 2 * ((y + 2) * numWidth + x);
+        idx3 = 2 * ((y + 2) * numWidth + x + 1);
+    }
+    else if (pos == 3) {
+        idx0 = 2 * ((y + 1) * numWidth + x + 1);
+        idx1 = 2 * ((y + 1) * numWidth + x + 2);
+        idx2 = 2 * ((y + 2) * numWidth + x + 1);
+        idx3 = 2 * ((y + 2) * numWidth + x + 2);
+    }
+
+    if (idx0 < 0 || idx1 < 0 || idx2 < 0 || idx3 < 0 || idx3 > totalConstraints)
+    {
+        return;
+    }
+
 
 
     
@@ -321,12 +355,15 @@ void ClothSolver::UpdateVelocityAndWriteBack(dim3 blocksPerGrid, dim3 threadsPer
 
 void ClothSolver::SolveStretchConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predictPositions, const glm::vec3* positions, const float* invMasses, const float constraintsDistances, const int numWidth, const int numHeight, int numConstraints, float epsilon, int updateDirection) {
 	kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, numConstraints, epsilon, updateDirection);
-    //cudaDeviceSynchronize();
+    cudaDeviceSynchronize();
 }
 
 void ClothSolver::SolveBendingConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, float* lambdas, const int numWidth, const int numHeight, const float constraintDistance, const float compliance, float alpha, float epsilon) {
-	kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, lambdas, numWidth, numHeight, constraintDistance, compliance, alpha, epsilon);
-	//cudaDeviceSynchronize();
+	kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, lambdas, numWidth, numHeight, constraintDistance, compliance, alpha, epsilon, 0);
+    kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, lambdas, numWidth, numHeight, constraintDistance, compliance, alpha, epsilon, 1);
+	kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, lambdas, numWidth, numHeight, constraintDistance, compliance, alpha, epsilon, 2);
+	kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, lambdas, numWidth, numHeight, constraintDistance, compliance, alpha, epsilon, 3);
+	cudaDeviceSynchronize();
 }
 
 void ClothSolver::SolveCollisionSphere(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, glm::vec3 center, float radius) 
