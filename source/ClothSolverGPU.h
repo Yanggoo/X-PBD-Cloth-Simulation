@@ -45,6 +45,7 @@ private:
     std::vector<glm::vec3> host_predictPosition;
     std::vector<glm::vec3> host_velocity;
     std::vector<float> host_invMass;
+    std::vector<float> host_lambdas;
     //std::vector<glm::vec3> m_Velocities;
     std::vector<Particle*> m_Particles;
 
@@ -54,6 +55,7 @@ private:
     glm::vec3* dev_predictPosition;
     glm::vec3* dev_velocity;
     glm::float32* dev_invMass;
+    glm::float32* dev_lambdas;
 
     //dim3 blocksPerGrid;
     //dim3 threadsPerBlock;

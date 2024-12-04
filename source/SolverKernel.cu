@@ -33,7 +33,6 @@ __global__ void kernSolveStretch(
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
-    //if (x >= numWidth || y >= numHeight) return;
 
 
     int index = y * blockDim.x * gridDim.x + x;
@@ -44,34 +43,75 @@ __global__ void kernSolveStretch(
 
 
     if (updateDirection == 0) { // Horizontal constraint
-        if ((x % 2 == 0) && (x + 1 < numWidth)) { // 确保右侧索引合法
-            idx1 = y * numWidth + x;         // 当前点
-            idx2 = y * numWidth + (x + 1);   // 右侧点
+        if ((x % 2 == 0) && (x + 1 < numWidth)) { // Within index range
+            idx1 = y * numWidth + x;         // Current
+            idx2 = y * numWidth + (x + 1);   // Right
         }
     }
     else if (updateDirection == 1) { // Vertical constraint
-        if ((y % 2 == 0) && (y + 1 < numHeight)) { // 确保下方索引合法
-            idx1 = y * numWidth + x;         // 当前点
-            idx2 = (y + 1) * numWidth + x;   // 下方点
+        if ((y % 2 == 0) && (y + 1 < numHeight)) { 
+            idx1 = y * numWidth + x;         // Current
+            idx2 = (y + 1) * numWidth + x;   // Under
         }
     }
-    else if (updateDirection == 2) { // Horizontal constraint (Even Row)
+    else if (updateDirection == 2) { // Horizontal constraint (Odd Row)
         if ((x % 2 != 0) && (x + 1 < numWidth)) {
-            idx1 = y * numWidth + x;         // 当前点
-            idx2 = y * numWidth + (x + 1);   // 右侧点
+            idx1 = y * numWidth + x;         // Current
+            idx2 = y * numWidth + (x + 1);   // Right
         }
     }
     else if (updateDirection == 3) { // Vertical constraint (Odd Column)
         if ((y % 2 != 0) && (y + 1 < numHeight)) {
-            idx1 = y * numWidth + x;         // 当前点
-            idx2 = (y + 1) * numWidth + x;   // 下方点
+            idx1 = y * numWidth + x;         // Current
+            idx2 = (y + 1) * numWidth + x;   // Under
         }
     }
     else {
-        return; // 无效方向
+        return;
     }
 
-    if (idx1 < 0 || idx1 >= numConstraints || idx2 < 0 || idx2 >= numConstraints) return;
+
+
+#pragma region Possible Optimization For Each Threads Call (NEEDFIX)
+    //if (updateDirection == 0) { // Horizontal constraint
+    //    // Check if x is even and if there is space for two indices
+    //    if (2 * x + 1 < numWidth - 1) {
+    //        idx1 = y * numWidth + 2 * x;        // Current
+    //        idx2 = y * numWidth + 2 * x + 1;    // Right
+    //    }
+    //}
+    //else if (updateDirection == 1) { // Vertical constraint
+    //    // Check if y is even and if there is space for two indices
+    //    if (2 * y + 1 < numHeight - 1) {
+    //        idx1 = 2 * y * numWidth + x;       // Current
+    //        idx2 = (2 * y + 1) * numWidth + x; // Down
+    //    }
+    //}
+    //else if (updateDirection == 2) { // Horizontal constraint (Odd Row)
+    //    // Check if x is odd and if there is space for two indices
+    //    if (2 * x + 2 < numWidth) {
+    //        idx1 = y * numWidth + 2 * x + 1;    // Current
+    //        idx2 = y * numWidth + 2 * x + 2;    // Right
+    //    }
+    //}
+    //else if (updateDirection == 3) { // Vertical constraint (Odd Column)
+    //    // Check if y is odd and if there is space for two indices
+    //    if (2 * y + 2 < numHeight) {
+    //        idx1 = 2 * y * numWidth + x;       // Current
+    //        idx2 = (2 * y + 2) * numWidth + x; // Down
+    //    }
+    //}
+    //else {
+    //    return; // Invalid update direction
+    //}
+#pragma endregion
+
+
+
+
+
+    if (idx1 < 0 || idx1 >= numConstraints || idx2 < 0 || idx2 >= numConstraints) 
+        return;
 
     float restDistance = constraintsDistances;
 
@@ -103,44 +143,35 @@ __global__ void kernSolveStretch(
 __global__ void kernSolveBendingConstraints(
     glm::vec3* predPositions,     // Predicted positions of particles
     const float* invMasses,       // Inverse masses of particles
+    float* lambdas,
     const int numWidth,           // Number of particles along width
     const int numHeight,          // Number of particles along height
-    const float constraintDistance, // Distance between constrained points
+    const float constraintAngle, 
     const float compliance,       // Compliance parameter
     float alpha,              
     float epsilon)                // Small value to prevent division by zero
 {
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x>=numWidth||y>=numHeight)
+    {
+        return;
+    }
+
+    int index = y * blockDim.x * gridDim.x + x;
 
     // Each thread works on a single constraint
     int totalConstraints = (numWidth - 1) * (numHeight - 1); // Total number of constraints
     if (index >= totalConstraints) return;
 
-    // Determine the row and column of the current thread
-    int row = index / (numWidth - 1); // Current row
-    int col = index % (numWidth - 1); // Current column
+    int idx0 = 2* (y * numWidth + x);
+    int idx1 = 2* (y * numWidth + x + 1);
+    int idx2 = 2* ((y + 1) * numWidth + x);
+    int idx3 = 2* ((y + 1) * numWidth + x + 1);
 
-    // Four particles involved in the bending constraint
-    int idx0, idx1, idx2, idx3;
 
-    switch (index % 2) {
-    case 0: // Horizontal constraint
-        idx0 = row * numWidth + col;        // Top-left
-        idx1 = row * numWidth + col + 1;    // Top-right
-        idx2 = (row + 1) * numWidth + col;  // Bottom-left
-        idx3 = (row + 1) * numWidth + col + 1; // Bottom-right
-        break;
-
-    case 1: // Vertical constraint
-        idx0 = (row - 1) * numWidth + col + 1; // Top
-        idx1 = row * numWidth + col;          // Bottom-left
-        idx2 = row * numWidth + col + 1;      // Bottom-right
-        idx3 = (row + 1) * numWidth + col;    // Bottom
-        break;
-
-    default:
-        return;
-    }
+    
 
     // Fetch positions and inverse masses
     glm::vec3 p0 = predPositions[idx0];
@@ -157,12 +188,19 @@ __global__ void kernSolveBendingConstraints(
     glm::vec3 n1 = glm::normalize(glm::cross(p2 - p0, p1 - p2));
     glm::vec3 n2 = glm::normalize(glm::cross(p2 - p1, p3 - p2));
 
+    if (glm::length(n1) < epsilon || glm::length(n2) < epsilon) return;
+
     // Compute the dot product and the current bending angle
     float d = glm::clamp(glm::dot(n1, n2), -1.0f, 1.0f);
     float currentAngle = glm::acos(d);
 
+
+
+    if (w0 + w1 + w2 + w3 <= 0.0f) return;
+
     // Compute constraint force and gradients
-    float C = currentAngle - constraintDistance;
+    float C = currentAngle - constraintAngle;
+
     if (fabs(C) < epsilon || isnan(C)) return;
 
     glm::vec3 gradientP2 = (glm::cross(p1, n2) + d * glm::cross(n1, p1)) / (glm::length(glm::cross(p1, p2)) + epsilon);
@@ -181,8 +219,8 @@ __global__ void kernSolveBendingConstraints(
     if (denominator < epsilon) return;
 
     // Compute delta lambda
-    float deltaLambda = -C / denominator;
-
+    float deltaLambda = (-C - lambdas[index] * alpha) / denominator;
+    lambdas[index] += deltaLambda;
     // Update predicted positions
     if (w0 > 0) predPositions[idx0] += deltaLambda * w0 * gradientP0;
     if (w1 > 0) predPositions[idx1] += deltaLambda * w1 * gradientP1;
@@ -286,8 +324,8 @@ void ClothSolver::SolveStretchConstraints(dim3 blocksPerGrid, dim3 threadsPerBlo
     //cudaDeviceSynchronize();
 }
 
-void ClothSolver::SolveBendingConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, const int numWidth, const int numHeight, const float constraintDistance, const float compliance, float alpha, float epsilon) {
-	kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, numWidth, numHeight, constraintDistance, compliance, alpha, epsilon);
+void ClothSolver::SolveBendingConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, float* lambdas, const int numWidth, const int numHeight, const float constraintDistance, const float compliance, float alpha, float epsilon) {
+	kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, lambdas, numWidth, numHeight, constraintDistance, compliance, alpha, epsilon);
 	//cudaDeviceSynchronize();
 }
 
