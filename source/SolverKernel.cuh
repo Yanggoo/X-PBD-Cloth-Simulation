@@ -12,6 +12,8 @@ namespace ClothSolver {
 
     void SolveBendingConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, float* lambdas, const int numWidth, const int numHeight, const float constraintDistance, const float compliance, float alpha, float epsilon);
 
-    void SolveCollisionSphere(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, glm::vec3 center, float radius);
-    void SolveCollisionCube(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, glm::vec3 center, glm::vec3 dimensions);
+    void SolveCollisionSphere(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, glm::vec3* positions, const float* invMasses, glm::vec3 center, float radius);
+    void SolveCollisionCube(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, glm::vec3* positions, const float* invMasses, glm::vec3 center, glm::vec3 dimensions);
+
+    void SolveCollisionParticle(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* position, glm::vec3* predPosition1, glm::vec3* predPosition2, const float* invMasses, const int* neighbors, const int particleCount);
 }

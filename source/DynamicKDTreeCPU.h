@@ -1,3 +1,5 @@
+#pragma once
+
 #include <nanoflann.hpp>
 #include <glm/glm.hpp>
 #include <vector>

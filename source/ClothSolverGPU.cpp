@@ -22,8 +22,8 @@ void checkCUDAError(const char* msg, int line = -1) {
 
 
 ClothSolverGPU::ClothSolverGPU() :
-    dev_position(nullptr), dev_predictPosition(nullptr), dev_velocity(nullptr), 
-    dev_invMass(nullptr), particleCount(0), m_currentOffset(0), m_ConstraintDistances(0)
+    dev_position(nullptr), dev_predictPosition(nullptr), dev_predictPosition2(nullptr), dev_velocity(nullptr),
+    dev_invMass(nullptr), dev_neighbors(nullptr), particleCount(0), m_currentOffset(0), m_ConstraintDistances(0), m_KDTree(host_position)
 {
     m_Substeps = 5;
     m_IterationNum = 5;
@@ -32,6 +32,7 @@ ClothSolverGPU::ClothSolverGPU() :
 ClothSolverGPU::~ClothSolverGPU() {
     cudaFree(dev_position);
     cudaFree(dev_predictPosition);
+    cudaFree(dev_predictPosition2);
     cudaFree(dev_invMass);
     cudaFree(dev_velocity);
 }
@@ -92,20 +93,51 @@ void ClothSolverGPU::ResponsibleFor(Cloth* cloth)
 }
 
 void ClothSolverGPU::Simulate(float deltaTime) {
+    {
+        std::vector<int> allNeighbors;
+        for (int i = 0; i < particleCount; i++) {
+            auto neighbors = m_KDTree.queryNeighbors(host_position[i], COLLISION_NEIGHBOR_COUNT);
+            for (int j = 0; j < COLLISION_NEIGHBOR_COUNT; j++) {
+                allNeighbors.push_back(neighbors[j]);
+            }
+        }
+
+        cudaMemcpy(dev_neighbors, &allNeighbors[0], particleCount * COLLISION_NEIGHBOR_COUNT * sizeof(int), cudaMemcpyHostToDevice);
+        checkCUDAErrorWithLine("cudaMemcpy to dev_position failed!");
+    }
+
+    {
+        for (const ClothData& clothData : m_clothData) {
+            for (size_t i = 0; i < m_Colliders.size(); i++) {
+                Collider* collider = m_Colliders[i];
+                dim3 blocksPerGrid = clothData.blocksPerGrid;
+                dim3 threadsPerBlock = clothData.threadsPerBlock;
+                int offset = clothData.m_offset;
+                if (Sphere* sphere = dynamic_cast<Sphere*>(collider)) {
+                    ClothSolver::SolveCollisionSphere(blocksPerGrid, threadsPerBlock, dev_position + offset, dev_position + offset, dev_invMass + offset, sphere->m_Position, sphere->m_Radius);
+                }
+                else if (Cube* cube = dynamic_cast<Cube*>(collider)) {
+                    ClothSolver::SolveCollisionCube(blocksPerGrid, threadsPerBlock, dev_position + offset, dev_position + offset, dev_invMass + offset, cube->m_Position, cube->m_Dimensions);
+                }
+            }
+        }
+    }
+
     float deltaTimeInSubstep = deltaTime / m_Substeps;
     for (int substep = 0; substep < m_Substeps; substep++) {
-        for (ClothData clothData : m_clothData) {
-            dim3 blocksPerGrid = clothData.blocksPerGrid;
-            dim3 threadsPerBlock = clothData.threadsPerBlock;
-            int offset = clothData.m_offset;
-            int width = clothData.m_width;
-            int height = clothData.m_height;
-            int clothParticleCount = width * height;
+        dim3 clothThreadPerBlock = dim3(threadDimX, 1, 1);
+        dim3 clothBlockPerGrid = dim3(particleCount / threadDimX, 1, 1);
+        ClothSolver::CalculatePredictPosition(clothBlockPerGrid, clothThreadPerBlock, dev_position, dev_predictPosition, dev_invMass, dev_velocity, deltaTimeInSubstep);
+        cudaDeviceSynchronize();
 
-            ClothSolver::CalculatePredictPosition(blocksPerGrid, threadsPerBlock, dev_position + offset, dev_predictPosition + offset, dev_invMass + offset, dev_velocity + offset, deltaTimeInSubstep);
-            cudaDeviceSynchronize();
-            for (int i = 0; i < m_IterationNum; i++) {
-
+        for (int i = 0; i < m_IterationNum; i++) {
+            for (const ClothData& clothData : m_clothData) {
+                dim3 blocksPerGrid = clothData.blocksPerGrid;
+                dim3 threadsPerBlock = clothData.threadsPerBlock;
+                int offset = clothData.m_offset;
+                int width = clothData.m_width;
+                int height = clothData.m_height;
+                int clothParticleCount = width * height;
                 //dim3 smallBlocksPerGrid = dim3(blocksPerGrid.x / 2, blocksPerGrid.y / 2, blocksPerGrid.z);
                 // todo constrains
                 ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 0);
@@ -120,24 +152,30 @@ void ClothSolverGPU::Simulate(float deltaTime) {
                 for (size_t i = 0; i < m_Colliders.size(); i++) {
                     Collider* collider = m_Colliders[i];
                     if (Sphere* sphere = dynamic_cast<Sphere*>(collider)) {
-                        ClothSolver::SolveCollisionSphere(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_invMass + offset, sphere->m_Position, sphere->m_Radius);
+                        ClothSolver::SolveCollisionSphere(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, sphere->m_Position, sphere->m_Radius);
                     }
                     else if (Cube* cube = dynamic_cast<Cube*>(collider)) {
-                        ClothSolver::SolveCollisionCube(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_invMass + offset, cube->m_Position, cube->m_Dimensions);
+                        ClothSolver::SolveCollisionCube(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset,  dev_invMass + offset, cube->m_Position, cube->m_Dimensions);
                     }
                 }
 
             }
 
-            ClothSolver::UpdateVelocityAndWriteBack(blocksPerGrid, threadsPerBlock, dev_position + offset, dev_predictPosition + offset, dev_velocity + offset, deltaTimeInSubstep, 0.1f, clothParticleCount);
-            
+            cudaMemcpy(dev_predictPosition2, dev_predictPosition, particleCount * sizeof(glm::vec3), cudaMemcpyDeviceToDevice);
+            ClothSolver::SolveCollisionParticle(clothBlockPerGrid, clothThreadPerBlock, dev_position, dev_predictPosition, dev_predictPosition2, dev_invMass, dev_neighbors, particleCount);
+            cudaMemcpy(dev_predictPosition, dev_predictPosition2, particleCount * sizeof(glm::vec3), cudaMemcpyDeviceToDevice);
+
         }
+
+        ClothSolver::UpdateVelocityAndWriteBack(clothBlockPerGrid, clothThreadPerBlock, dev_position, dev_predictPosition, dev_velocity, deltaTimeInSubstep, 0.1f, particleCount);
         
         cudaDeviceSynchronize();
     }
 
     // todo use cudaGL
     CopyBackToCPU();
+
+    m_KDTree.rebuild();
 }
 
 void ClothSolverGPU::OnInitFinish() {
@@ -145,11 +183,16 @@ void ClothSolverGPU::OnInitFinish() {
     checkCUDAErrorWithLine("cudaMalloc dev_position failed!");
     cudaMalloc((void**)&dev_predictPosition, particleCount * sizeof(glm::vec3));
     checkCUDAErrorWithLine("cudaMalloc dev_predictPosition failed!");
+    cudaMalloc((void**)&dev_predictPosition2, particleCount * sizeof(glm::vec3));
+    checkCUDAErrorWithLine("cudaMalloc dev_predictPosition2 failed!");
     cudaMalloc((void**)&dev_velocity, particleCount * sizeof(glm::vec3));
     checkCUDAErrorWithLine("cudaMalloc dev_velocity failed!");
     cudaMalloc((void**)&dev_invMass, particleCount * sizeof(float));
     checkCUDAErrorWithLine("cudaMalloc dev_invMass failed!");
     cudaMalloc((void**)&dev_lambdas, particleCount * sizeof(float));
+    checkCUDAErrorWithLine("cudaMalloc dev_lambdas failed!");
+    cudaMalloc((void**)&dev_neighbors, particleCount * COLLISION_NEIGHBOR_COUNT * sizeof(int));
+    checkCUDAErrorWithLine("cudaMalloc dev_lambdas failed!");
 
     cudaMemcpy(dev_position, &host_position[0], particleCount * sizeof(glm::vec3), cudaMemcpyHostToDevice);
     checkCUDAErrorWithLine("cudaMemcpy to dev_position failed!");
@@ -168,6 +211,8 @@ void ClothSolverGPU::OnInitFinish() {
     host_lambdas.clear();
 
     cudaDeviceSynchronize();
+
+    m_KDTree.rebuild();
 }
 
 Particle* ClothSolverGPU::GetParticleAtScreenPos(int mouseX, int mouseY) {

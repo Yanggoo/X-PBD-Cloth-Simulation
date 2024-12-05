@@ -3,6 +3,9 @@
 #include "Cloth.h"
 #include "SolverKernel.cuh"
 #include "ClothSolverBase.h"
+#include "DynamicKDTreeCPU.h"
+
+#define COLLISION_NEIGHBOR_COUNT 8
 
 class ClothSolverGPU : public ClothSolverBase
 {
@@ -53,9 +56,13 @@ private:
 
     glm::vec3* dev_position;
     glm::vec3* dev_predictPosition;
+    glm::vec3* dev_predictPosition2;
     glm::vec3* dev_velocity;
     glm::float32* dev_invMass;
     glm::float32* dev_lambdas;
+    int* dev_neighbors;
+
+    DynamicKDTreeCPU m_KDTree;
 
     //dim3 blocksPerGrid;
     //dim3 threadsPerBlock;

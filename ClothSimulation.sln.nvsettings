@@ -1,2 +1,2 @@
 [WarpWatch]
-Expressions=blockIdx, threadIdx
+Expressions=blockIdx, threadIdx, currentDistance, ((__local__ float*) &p1p2)[0], ((__local__ float*) &p1p2)[1], ((__local__ float*) &p1p2)[2]

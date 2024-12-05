@@ -2,14 +2,39 @@
 
 #include <device_launch_parameters.h>
 
+#define FRICTION 0.1f
+#define EPSILON 1e-6f
+#define PARTICLE_MIN_DISTANCE 0.01f
 
 using namespace ClothSolver;
 
 
+__device__ float customMin(float a, float b) {
+    return a < b ? a : b;
+}
+
+__device__ glm::vec3 ComputeFriction(glm::vec3 correction, glm::vec3 relativeVelocity) {
+    float length = glm::length(correction);
+    if (FRICTION > 0 && length > 0) {
+        glm::vec3 correctionDir = correction / length;
+        glm::vec3 tangent = relativeVelocity - glm::dot(relativeVelocity, correctionDir) * correctionDir;
+        float tangentLength = glm::length(tangent);
+        if (tangentLength == 0)
+            return glm::vec3(0);
+        glm::vec3 tangentDir = tangent / tangentLength;
+        float maxTangential = length * FRICTION;
+        return -tangentDir * customMin(length * FRICTION, tangentLength);
+    }
+    else {
+        return glm::vec3(0);
+    }
+}
+
 __global__ void kernCalculatePredictPosition(glm::vec3* position, glm::vec3* predictPosition, const float* invMasses, glm::vec3* velocity, float deltaTime) {
-    int x = blockDim.x * blockIdx.x + threadIdx.x;
-    int y = blockDim.y * blockIdx.y + threadIdx.y;
-    int index = y * blockDim.x * gridDim.x + x;
+    //int x = blockDim.x * blockIdx.x + threadIdx.x;
+    //int y = blockDim.y * blockIdx.y + threadIdx.y;
+    //int index = y * blockDim.x * gridDim.x + x;
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
 
     if(invMasses[index] == 0.0f) return;
     glm::vec3 pos = position[index];
@@ -263,7 +288,7 @@ __global__ void kernSolveBendingConstraints(
 }
 
 
-__global__ void kernSolveCollisionSphere(glm::vec3* predPositions, const float* invMasses, glm::vec3 center, float radius)
+__global__ void kernSolveCollisionSphere(glm::vec3* predPositions, glm::vec3* positions, const float* invMasses, glm::vec3 center, float radius)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -283,9 +308,13 @@ __global__ void kernSolveCollisionSphere(glm::vec3* predPositions, const float* 
     }
 
     position += offset;
+
+    glm::vec3 relativeVelocity = position - positions[index];
+    glm::vec3 friction = ComputeFriction(offset, relativeVelocity);
+    position += friction;
 }
 
-__global__ void kernSolveCollisionCube(glm::vec3* predPositions, const float* invMasses, glm::vec3 center, glm::vec3 dimensions)
+__global__ void kernSolveCollisionCube(glm::vec3* predPositions, glm::vec3* positions, const float* invMasses, glm::vec3 center, glm::vec3 dimensions)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -297,7 +326,7 @@ __global__ void kernSolveCollisionCube(glm::vec3* predPositions, const float* in
 
     glm::vec3& position = predPositions[index];
     glm::vec3 offset;
-    glm::vec3 halfExtents = dimensions * 0.5f;
+    glm::vec3 halfExtents = dimensions * 0.5f + 0.1f;
     glm::vec3 diff = position - center;
     if (diff.x > -halfExtents.x && diff.x<halfExtents.x
         && diff.y>-halfExtents.y && diff.y < halfExtents.y
@@ -320,6 +349,56 @@ __global__ void kernSolveCollisionCube(glm::vec3* predPositions, const float* in
     }
     
     position += offset;
+
+    glm::vec3 relativeVelocity = position - positions[index];
+    glm::vec3 friction = ComputeFriction(offset, relativeVelocity);
+    position += friction;
+}
+
+__global__ void kernSolveCollisionParticle(glm::vec3* position, glm::vec3* predPosition1, glm::vec3* predPosition2, const float* invMasses, const int* neighbors, const int particleCount) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+
+    //auto neighbors = m_KDTree.queryNeighbors(m_PredPositions[i], 8);
+    //for (int neighbor = 0; neighbor < particleCount; ++neighbor) {
+    for (int i = 0; i < 8; ++i) {
+        int neighbor = neighbors[index * 8 + i];
+        //already checked
+        if (neighbor == index)
+            continue;
+
+        glm::vec3 p1p2 = predPosition1[index] - predPosition1[neighbor];
+        float currentDistance = glm::length(p1p2);
+        auto w1 = invMasses[index];
+        auto w2 = invMasses[neighbor];
+        if (currentDistance < PARTICLE_MIN_DISTANCE && w1 + w2>0) {
+            // alpha equals to 0, because stiffness is infinite
+            float C = currentDistance - PARTICLE_MIN_DISTANCE;
+            glm::vec3 gradientP1 = p1p2 / (currentDistance + EPSILON);
+            glm::vec3 gradientP2 = -p1p2 / (currentDistance + EPSILON);
+            float deltaLambda = -C / (w1 + w2);//should be /(w1*glm::lenth2(gradientP1)+...) But lenth2(gradientP1) equals to 1
+            predPosition2[index] += gradientP1 * deltaLambda * w1;
+            //m_PredPositions[neighbor] += gradientP2 * deltaLambda * w2;
+
+            glm::vec3 relativeVelocity = (predPosition1[index] - position[index])
+                - (predPosition1[neighbor] - position[neighbor]);
+            glm::vec3 friction = ComputeFriction(gradientP1 * deltaLambda, relativeVelocity);
+            predPosition2[index] += friction * w1;
+            //m_PredPositions[neighbor] -= friction * w2;
+            //glm::vec3 neighborRelativeVelocity = (predPosition1[neighbor] - position[neighbor]) - (predPosition1[index] - position[index]);
+            //glm::vec3 neighborFriction = ComputeFriction(gradientP1 * deltaLambda, neighborRelativeVelocity);
+            //predPosition2[index] -= neighborFriction * w1;
+
+
+            glm::vec3 p1p2Inv = predPosition1[neighbor] - predPosition1[index];
+            glm::vec3 gradientP1Inv = p1p2Inv / (currentDistance + EPSILON);
+            glm::vec3 gradientP2Inv = -p1p2Inv / (currentDistance + EPSILON);
+            predPosition2[index] += gradientP2Inv * deltaLambda * w1;
+
+            glm::vec3 neighborRelativeVelocity = (predPosition1[neighbor] - position[neighbor]) - (predPosition1[index] - position[index]);
+            glm::vec3 neighborFriction = ComputeFriction(gradientP2Inv * deltaLambda, neighborRelativeVelocity);
+            predPosition2[index] -= neighborFriction * w1;
+        }
+    }
 }
 
 
@@ -331,11 +410,13 @@ __global__ void updateVelocityAndWriteBack(
     float damping,
     int numParticles) 
 {
-    int x = blockDim.x * blockIdx.x + threadIdx.x;
-    int y = blockDim.y * blockIdx.y + threadIdx.y;
-    int idx = y * blockDim.x * gridDim.x + x;
-    //int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= numParticles) return;
+    //int x = blockDim.x * blockIdx.x + threadIdx.x;
+    //int y = blockDim.y * blockIdx.y + threadIdx.y;
+    //int idx = y * blockDim.x * gridDim.x + x;
+    ////int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    //if (idx >= numParticles) return;
+
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     glm::vec3 vel = (predictPosition[idx] - position[idx]) / deltaTime;
     vel *= glm::clamp(1.0f - damping * deltaTime, 0.0f, 1.0f);
@@ -366,12 +447,15 @@ void ClothSolver::SolveBendingConstraints(dim3 blocksPerGrid, dim3 threadsPerBlo
 	cudaDeviceSynchronize();
 }
 
-void ClothSolver::SolveCollisionSphere(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, glm::vec3 center, float radius) 
+void ClothSolver::SolveCollisionSphere(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, glm::vec3* positions, const float* invMasses, glm::vec3 center, float radius)
 {
-    kernSolveCollisionSphere << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, center, radius);
+    kernSolveCollisionSphere << <blocksPerGrid, threadsPerBlock >> > (predPositions, positions, invMasses, center, radius);
 }
 
-void ClothSolver::SolveCollisionCube(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, glm::vec3 center, glm::vec3 dimensions) {
-    kernSolveCollisionCube << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, center, dimensions);
+void ClothSolver::SolveCollisionCube(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, glm::vec3* positions, const float* invMasses, glm::vec3 center, glm::vec3 dimensions) {
+    kernSolveCollisionCube << <blocksPerGrid, threadsPerBlock >> > (predPositions, positions, invMasses, center, dimensions);
 }
 
+void ClothSolver::SolveCollisionParticle(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* position, glm::vec3* predPosition1, glm::vec3* predPosition2, const float* invMasses, const int* neighbors, const int particleCount) {
+    kernSolveCollisionParticle << <blocksPerGrid, threadsPerBlock >> > (position, predPosition1, predPosition2, invMasses, neighbors, particleCount);
+}
