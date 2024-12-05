@@ -111,6 +111,7 @@
     <ClCompile Include="source\Sphere.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\Grid3D.h" />
     <ClInclude Include="source\Cube.h" />
     <ClInclude Include="source\DynamicKDTreeCPU.h" />
     <ClInclude Include="source\ClothSolverBase.h" />
@@ -129,6 +130,7 @@
     <ClInclude Include="source\Timer.h" />
     <ClInclude Include="source\Transform.h" />
     <ClInclude Include="source\Sphere.h" />
+    <ClInclude Include="source\Triangle.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="source\SolverKernel.cu" />
