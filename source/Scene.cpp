@@ -59,7 +59,7 @@ void Scene::LoadSceneSphereAndCloth()
 	std::shared_ptr<Sphere> sphere = std::make_shared<Sphere>(0.1f);
 	sphere->Initialize(glm::vec3(0, 0, 1), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(sphere);
-	std::shared_ptr<Cloth> cloth = std::make_shared<Cloth>(2, 2, 32, 32,true,glm::vec3(1.0f, 0.6f, 0.6f));
+	std::shared_ptr<Cloth> cloth = std::make_shared<Cloth>(2, 2, 16, 16,true,glm::vec3(1.0f, 0.6f, 0.6f));
 	cloth->Initialize(glm::vec3(0, 0, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(cloth);
 
@@ -68,6 +68,7 @@ void Scene::LoadSceneSphereAndCloth()
 	solver = std::make_shared<ClothSolverGPU>();
 #else
 	solver = std::make_shared<ClothSolverCPU>();
+	dynamic_cast<ClothSolverCPU*>(solver.get())->m_MinDistanceBetweenParticles = 0.05;
 #endif // USE_GPU_SOLVER
 
 	//std::shared_ptr<ClothSolverBase> solver = std::make_shared<ClothSolverCPU>();
@@ -91,19 +92,30 @@ void Scene::LoadSceneClothAndCloth()
 	std::shared_ptr<Cube> platform = std::make_shared<Cube>(3, 0.2, 2);
 	platform->Initialize(glm::vec3(0, -1, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(platform);
-	std::shared_ptr<Cloth> cloth0 = std::make_shared<Cloth>(1, 1, 16, 16, false, glm::vec3(1.0f, 0.6f, 0.6f));
-	cloth0->Initialize(glm::vec3(-1, 0, 0), glm::vec3(1, 1, 1), glm::vec3(90, 0, 0));
-	AddActor(cloth0);
+	std::shared_ptr<Cloth> cloth0;
 
-	std::shared_ptr<Cloth> cloth1 = std::make_shared<Cloth>(1, 1, 16, 16, true, glm::vec3(0.6f, 1.0f, 0.6f));
-	cloth1->Initialize(glm::vec3(1, 0, 0), glm::vec3(1, 1, 1), glm::vec3(45, 90, 0));
-	AddActor(cloth1);
+	std::shared_ptr<Cloth> cloth1;
 
 	std::shared_ptr<ClothSolverBase> solver;
 #if USE_GPU_SOLVER
 	solver = std::make_shared<ClothSolverGPU>();
-#else
+	cloth0 = std::make_shared<Cloth>(1, 1, 32, 32, true, glm::vec3(1.0f, 0.6f, 0.6f));
+	cloth0->Initialize(glm::vec3(-1, 0, 0), glm::vec3(1, 1, 1), glm::vec3(90, 0, 0));
+	AddActor(cloth0);
+	cloth1 = std::make_shared<Cloth>(1, 1, 32, 32, true, glm::vec3(0.6f, 1.0f, 0.6f));
+	cloth1->Initialize(glm::vec3(1, 0, 0), glm::vec3(1, 1, 1), glm::vec3(45, 90, 0));
+	AddActor(cloth1);
 	solver = std::make_shared<ClothSolverCPU>();
+	dynamic_cast<ClothSolverCPU*>(solver.get())->m_MinDistanceBetweenParticles = 0.025;
+#else
+	cloth0 = std::make_shared<Cloth>(1, 1, 16, 16, true, glm::vec3(1.0f, 0.6f, 0.6f));
+	cloth0->Initialize(glm::vec3(-1, 0, 0), glm::vec3(1, 1, 1), glm::vec3(90, 0, 0));
+	AddActor(cloth0);
+	cloth1 = std::make_shared<Cloth>(1, 1, 16, 16, true, glm::vec3(0.6f, 1.0f, 0.6f));
+	cloth1->Initialize(glm::vec3(1, 0, 0), glm::vec3(1, 1, 1), glm::vec3(45, 90, 0));
+	AddActor(cloth1);
+	solver = std::make_shared<ClothSolverCPU>();
+	dynamic_cast<ClothSolverCPU*>(solver.get())->m_MinDistanceBetweenParticles = 0.05;
 #endif // USE_GPU_SOLVER
 
 	//std::shared_ptr<ClothSolverBase> solver = std::make_shared<ClothSolverCPU>();

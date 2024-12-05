@@ -23,6 +23,7 @@ private:
 	bool	m_AppRunning;
 	Scene	m_Scene;
 	Particle* m_SelectedParticle;
+	glm::vec3 m_SelectedParticleDestinPosition;
 	bool isMouseDown = false;
 	float selectedParticleZ;
 };

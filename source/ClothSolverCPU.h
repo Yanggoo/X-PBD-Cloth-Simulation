@@ -62,12 +62,12 @@ public:
 	const float m_ShrinkCompliance = 0.0001;
 	const float m_Damping = 1;
 	const float m_Epsilon = 1e-6;
-	const float m_MinDistanceBetweenParticles = 0.05;
+	float m_MinDistanceBetweenParticles = 0.05;
 	const float m_Friction = 0.1f;
 	const float m_MaxVelecity = 10.0f;
 	const float m_Gravity = 30.f;
-	const float m_GridCellSize = 0.3f;
-	const float m_ClothThickness = 0.01f;
+	const float m_GridCellSize = 1.0f;
+	const float m_ClothThickness = 0.001f;
 
 	std::vector<std::tuple<int, int, float>> m_StretchConstraints; // idx1, idx2, distance
 	std::vector<std::tuple<int, int, float>> m_ShirnkConstraints; // idx1, idx2, distance

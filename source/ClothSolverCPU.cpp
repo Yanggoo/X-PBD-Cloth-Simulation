@@ -102,7 +102,7 @@ void ClothSolverCPU::ResponsibleFor(Cloth* cloth)
 			if (w < NumWidth - 1 && h < NumHeight - 1)
 			{
 				m_Grid.insertTriangle(w * NumHeight + h + idxOffset, w * NumHeight + h + 1 + idxOffset, (w + 1) * NumHeight + h + idxOffset);
-				m_Grid.insertTriangle(w * NumHeight + h+1 + idxOffset, (w + 1) * NumHeight + h + idxOffset, (w + 1) * NumHeight + h+1 + idxOffset);
+				m_Grid.insertTriangle(w * NumHeight + h + 1 + idxOffset, (w + 1) * NumHeight + h + idxOffset, (w + 1) * NumHeight + h + 1 + idxOffset);
 			}
 		}
 	}
@@ -116,8 +116,8 @@ void ClothSolverCPU::Simulate(float deltaTime)
 	float deltaTimeInSubstep = deltaTime / m_Substeps;
 	for (int substep = 0; substep < m_Substeps; substep++) {
 		PredictPositions(deltaTimeInSubstep);
-		m_Grid.Update();
-		GenerateSelfCollisionConstraints();
+		//m_Grid.Update();
+		//GenerateSelfCollisionConstraints();
 		m_KDTree.rebuild();
 		//fill(m_Lambdas.begin(), m_Lambdas.end(), 0.0f);
 		for (int i = 0; i < m_IterationNum; i++)
@@ -127,7 +127,7 @@ void ClothSolverCPU::Simulate(float deltaTime)
 			SolveBending(deltaTimeInSubstep);
 			SolveParticleCollision();
 			CollideSDF(m_PredPositions);
-			SolveSelfCollision(deltaTimeInSubstep);
+			//SolveSelfCollision(deltaTimeInSubstep);
 		}
 		for (int i = 0; i < m_ParticlesNum; i++) {
 			m_Velocities[i] = (m_PredPositions[i] - m_Positions[i]) / deltaTimeInSubstep;
@@ -337,11 +337,11 @@ void ClothSolverCPU::GenerateSelfCollisionConstraints() {
 			if (normalLength < m_Epsilon) continue;
 			normal /= normalLength;
 
-			auto dist = glm::dot(normal, q-p1);
-			auto distLast = glm::dot(normal, qLast-p1);
+			auto dist = glm::dot(normal, q - p1);
+			auto distLast = glm::dot(normal, qLast - p1);
 
-			if (dist * distLast < -m_Epsilon) {
-				float t = distLast / ( distLast - dist);
+			if (dist * distLast < -m_Epsilon || abs(dist)<m_ClothThickness) {
+				float t = distLast / (distLast - dist);
 				auto qIntersection = qLast + t * (q - qLast);
 
 				auto v0 = p2 - p1;
@@ -354,7 +354,7 @@ void ClothSolverCPU::GenerateSelfCollisionConstraints() {
 				float w = glm::length(glm::cross(v0, v1));
 
 
-				if (u + v + w<S*1.1) {
+				if (u + v + w < S * 1.1) {
 					m_SelfCollisionConstraints.push_back(std::make_tuple(i, tri.v0, tri.v1, tri.v2));
 				}
 			}
@@ -385,17 +385,18 @@ void ClothSolverCPU::SolveSelfCollision(float deltaTime)
 		auto w2 = m_Particles[idx3]->m_InvMass;
 		auto w3 = m_Particles[idx4]->m_InvMass;
 		auto normal = glm::normalize(glm::cross(p2 - p1, p3 - p1));
-		auto dist = glm::dot(normal, q -p1);
+		auto dist = glm::dot(normal, q - p1);
 		if (true)
 		{
 			glm::vec3 qLast = m_Positions[idx1];
 			glm::vec3 p1Last = m_Positions[idx2];
 			glm::vec3 p2Last = m_Positions[idx3];
 			glm::vec3 p3Last = m_Positions[idx4];
-			bool inside = glm::dot(normal, qLast - p1Last) < 0;
+			auto normalLast = glm::normalize(glm::cross(p2Last - p1Last, p3Last - p1Last));
+			bool inside = glm::dot(normalLast, qLast - p1Last) < 0;
 
-			if ((inside && -dist - m_ClothThickness > m_ClothThickness)||
-				(!inside && dist - m_ClothThickness > m_ClothThickness)) {
+			if ((inside && -dist - m_ClothThickness > m_Epsilon) ||
+				(!inside && dist - m_ClothThickness > m_Epsilon)) {
 				continue;
 			}
 
@@ -406,12 +407,12 @@ void ClothSolverCPU::SolveSelfCollision(float deltaTime)
 			glm::mat3 GradientP1P3 = (glm::mat3(0, p1p2.z, -p1p2.y, -p1p2.z, 0, p1p2.x, p1p2.y, -p1p2.x, 0)
 				+ outerProduct(normal, glm::cross(normal, p1p2))) / glm::length(glm::cross(p1p2, p1p3));
 			glm::vec3 gradientQ = normal;
-			//glm::vec3 gradientP2 =  GradientP1P2* (q - p1);
-			//glm::vec3 gradientP3 =  GradientP1P3* (q - p1);
-			//glm::vec3 gradientP1 = -normal -GradientP1P2*q - GradientP1P3*q;
-			glm::vec3 gradientP2 = -normal;
-			glm::vec3 gradientP3 = -normal;
-			glm::vec3 gradientP1 = -normal;
+			glm::vec3 gradientP2 =  GradientP1P2* (q - p1);
+			glm::vec3 gradientP3 =  GradientP1P3* (q - p1);
+			glm::vec3 gradientP1 = -normal + (q-p1)*(-GradientP1P2 - GradientP1P3);
+			//glm::vec3 gradientP2 = -normal;
+			//glm::vec3 gradientP3 = -normal;
+			//glm::vec3 gradientP1 = -normal;
 			if (!inside) {
 				//Outside
 				float C = dist - m_ClothThickness;
