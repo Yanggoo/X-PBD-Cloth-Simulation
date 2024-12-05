@@ -38,7 +38,7 @@ private:
     size_t particleCount;
     int m_Substeps;
     int m_IterationNum;
-    float m_ConstraintDistances;
+    std::vector<float> m_ConstraintDistances;
 
     int m_currentOffset;
 

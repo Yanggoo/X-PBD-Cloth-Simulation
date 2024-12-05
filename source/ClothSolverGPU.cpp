@@ -87,7 +87,9 @@ void ClothSolverGPU::ResponsibleFor(Cloth* cloth)
     //std::cout<<m_ConstraintDistances[0]<<std::endl;
     //std::cout<<m_ConstraintDistances[1]<<std::endl;
 
-    m_ConstraintDistances = glm::length(cloth->m_Particles[0].GetPosition() - cloth->m_Particles[1].GetPosition());
+    m_ConstraintDistances.push_back(glm::length(cloth->m_Particles[0].GetPosition() - cloth->m_Particles[1].GetPosition()));
+    m_ConstraintDistances.push_back(glm::length(cloth->m_Particles[1].GetPosition() - cloth->m_Particles[cloth->m_NumWidth].GetPosition()));
+
 }
 
 void ClothSolverGPU::Simulate(float deltaTime) {
@@ -137,7 +139,8 @@ void ClothSolverGPU::Simulate(float deltaTime) {
                 int height = clothData.m_height;
                 int clothParticleCount = width * height;
                 // todo constrains
-                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height);
+                float vecs[2] = {m_ConstraintDistances[0],m_ConstraintDistances[1]};
+                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, vecs, width, height);
                 cudaDeviceSynchronize();
 
                 auto bendComplience = 10;

@@ -128,6 +128,34 @@ __global__ void kernSolveStretch(
         }
 
     }
+    else if (updateDirection == 4) {
+        // Check if x is even and if there is space for two indices
+        if (2 * y + 1 <= numHeight - 1 && x + 1 <= numWidth - 1) {
+            idx1 = 2 * y * numWidth + x;       // Current
+            idx2 = (2 * y + 1) * numWidth + x + 1; // Down
+        }
+    }
+    else if (updateDirection == 5) {
+        // Check if y is odd and if there is space for two indices
+        if (2 * y + 2 < numHeight && x + 1 <= numWidth - 1) {
+            idx1 = (2 * y + 1) * numWidth + x;       // Current
+            idx2 = (2 * y + 2) * numWidth + x + 1; // Down
+        }
+    }
+    else if (updateDirection == 6) {
+        // Check if x is even and if there is space for two indices
+        if (2 * x + 1 <= numWidth - 1 && y + 1 <= numWidth - 1) {
+            idx1 = y * numWidth + 2 * x + 1;        // Current
+            idx2 = (y + 1) * numWidth + 2 * x;    // Left
+        }
+    }
+    else if (updateDirection == 7) {
+        // Check if x is odd and if there is space for two indices
+        if (2 * x + 2 < numWidth && y + 1 <= numWidth - 1) {
+            idx1 = y * numWidth + 2 * x + 2;    // Current
+            idx2 = (y + 1) * numWidth + 2 * x + 1;    // Right
+        }
+    }
     else {
         return; // Invalid update direction
     }
@@ -438,23 +466,42 @@ void ClothSolver::UpdateVelocityAndWriteBack(dim3 blocksPerGrid, dim3 threadsPer
 }
 
 
-void ClothSolver::SolveStretchConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predictPositions, const glm::vec3* positions, const float* invMasses, const float constraintsDistances, const int numWidth, const int numHeight) {
-	kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 0, false);
+void ClothSolver::SolveStretchConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predictPositions, const glm::vec3* positions, const float* invMasses, const float* constraintsDistances, const int numWidth, const int numHeight) {
+	kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[0], numWidth, numHeight, 0, false);
     cudaDeviceSynchronize();
-    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 1, false);
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[0], numWidth, numHeight, 1, false);
     cudaDeviceSynchronize();
-    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 2, false);
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[0], numWidth, numHeight, 2, false);
     cudaDeviceSynchronize();
-    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 3, false);
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[0], numWidth, numHeight, 3, false);
     cudaDeviceSynchronize();
 
-    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 0, true);
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[1], numWidth, numHeight, 4, false);
     cudaDeviceSynchronize();
-    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 1, true);
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[1], numWidth, numHeight, 5, false);
     cudaDeviceSynchronize();
-    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 2, true);
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[1], numWidth, numHeight, 6, false);
     cudaDeviceSynchronize();
-    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 3, true);
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[1], numWidth, numHeight, 7, false);
+    cudaDeviceSynchronize();
+
+
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[0], numWidth, numHeight, 0, true);
+    cudaDeviceSynchronize();
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[0], numWidth, numHeight, 1, true);
+    cudaDeviceSynchronize();
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[0], numWidth, numHeight, 2, true);
+    cudaDeviceSynchronize();
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[0], numWidth, numHeight, 3, true);
+    cudaDeviceSynchronize();
+
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[1], numWidth, numHeight, 4, true);
+    cudaDeviceSynchronize();
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[1], numWidth, numHeight, 5, true);
+    cudaDeviceSynchronize();
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[1], numWidth, numHeight, 6, true);
+    cudaDeviceSynchronize();
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances[1], numWidth, numHeight, 7, true);
     cudaDeviceSynchronize();
 }
 
