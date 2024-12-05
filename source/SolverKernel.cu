@@ -332,9 +332,9 @@ __global__ void kernSolveCollisionCube(glm::vec3* predPositions, glm::vec3* posi
     if (diff.x > -halfExtents.x && diff.x<halfExtents.x
         && diff.y>-halfExtents.y && diff.y < halfExtents.y
         && diff.z>-halfExtents.z && diff.z < halfExtents.z) {
-        float dx = diff.x > 0 ? halfExtents.x + 0.01 - diff.x : -halfExtents.x - 0.01 - diff.x;
-        float dy = diff.y > 0 ? halfExtents.y + 0.01 - diff.y : -halfExtents.y - 0.01 - diff.y;
-        float dz = diff.z > 0 ? halfExtents.z + 0.01 - diff.z : -halfExtents.z - 0.01 - diff.z;
+        float dx = diff.x > 0 ? halfExtents.x - diff.x : -halfExtents.x - diff.x;
+        float dy = diff.y > 0 ? halfExtents.y - diff.y : -halfExtents.y - diff.y;
+        float dz = diff.z > 0 ? halfExtents.z - diff.z : -halfExtents.z - diff.z;
         if (abs(dx) <= abs(dy) && abs(dx) <= abs(dz)) {
             offset = glm::vec3(dx, 0.0f, 0.0f);
         }
