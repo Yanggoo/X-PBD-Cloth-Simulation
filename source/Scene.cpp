@@ -105,8 +105,6 @@ void Scene::LoadSceneClothAndCloth()
 	cloth1 = std::make_shared<Cloth>(1, 1, 32, 32, true, glm::vec3(0.6f, 1.0f, 0.6f));
 	cloth1->Initialize(glm::vec3(1, 0, 0), glm::vec3(1, 1, 1), glm::vec3(45, 90, 0));
 	AddActor(cloth1);
-	solver = std::make_shared<ClothSolverCPU>();
-	dynamic_cast<ClothSolverCPU*>(solver.get())->m_MinDistanceBetweenParticles = 0.025;
 #else
 	cloth0 = std::make_shared<Cloth>(1, 1, 16, 16, true, glm::vec3(1.0f, 0.6f, 0.6f));
 	cloth0->Initialize(glm::vec3(-1, 0, 0), glm::vec3(1, 1, 1), glm::vec3(90, 0, 0));

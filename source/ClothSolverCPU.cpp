@@ -58,7 +58,6 @@ void ClothSolverCPU::ResponsibleFor(Cloth* cloth)
 						(w + scale) * NumHeight + h + idxOffset,
 						glm::length(cloth->m_Particles[w * cloth->m_NumHeight + h + scale].GetPosition()
 							- cloth->m_Particles[(w + scale) * cloth->m_NumHeight + h].GetPosition())));
-
 			}
 
 			//Large Scale Shrink Constraints
@@ -340,7 +339,7 @@ void ClothSolverCPU::GenerateSelfCollisionConstraints() {
 			auto dist = glm::dot(normal, q - p1);
 			auto distLast = glm::dot(normal, qLast - p1);
 
-			if (dist * distLast < -m_Epsilon || abs(dist)<m_ClothThickness) {
+			if (dist * distLast < -m_Epsilon || abs(dist) < m_ClothThickness) {
 				float t = distLast / (distLast - dist);
 				auto qIntersection = qLast + t * (q - qLast);
 
@@ -407,9 +406,9 @@ void ClothSolverCPU::SolveSelfCollision(float deltaTime)
 			glm::mat3 GradientP1P3 = (glm::mat3(0, p1p2.z, -p1p2.y, -p1p2.z, 0, p1p2.x, p1p2.y, -p1p2.x, 0)
 				+ outerProduct(normal, glm::cross(normal, p1p2))) / glm::length(glm::cross(p1p2, p1p3));
 			glm::vec3 gradientQ = normal;
-			glm::vec3 gradientP2 =  GradientP1P2* (q - p1);
-			glm::vec3 gradientP3 =  GradientP1P3* (q - p1);
-			glm::vec3 gradientP1 = -normal + (q-p1)*(-GradientP1P2 - GradientP1P3);
+			glm::vec3 gradientP2 = GradientP1P2 * (q - p1);
+			glm::vec3 gradientP3 = GradientP1P3 * (q - p1);
+			glm::vec3 gradientP1 = -normal + (q - p1) * (-GradientP1P2 - GradientP1P3);
 			//glm::vec3 gradientP2 = -normal;
 			//glm::vec3 gradientP3 = -normal;
 			//glm::vec3 gradientP1 = -normal;
