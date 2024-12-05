@@ -54,15 +54,14 @@ __global__ void kernSolveStretch(
     const glm::vec3* positions,
     const float* invMasses,
     const float constraintsDistances, const int numWidth, const int numHeight,
-    int numConstraints,
-    float epsilon, int updateDirection)
+    int updateDirection, bool isShrink)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
 
 
     int index = y * blockDim.x * gridDim.x + x;
-    if (index >= numConstraints) return;
+    //if (index >= numConstraints) return;
 
     int idx1 = -1, idx2 = -1;
 
@@ -138,7 +137,10 @@ __global__ void kernSolveStretch(
 
 
 
-    if (idx1 < 0 || idx1 >= numConstraints || idx2 < 0 || idx2 >= numConstraints) 
+    //if (idx1 < 0 || idx1 >= numConstraints || idx2 < 0 || idx2 >= numConstraints) 
+    //    return;
+
+    if (idx1 < 0 || idx2 < 0 || x + y >= numWidth + numHeight/2)
         return;
 
     float restDistance = constraintsDistances;
@@ -149,19 +151,22 @@ __global__ void kernSolveStretch(
     glm::vec3 p1p2 = predictPositions[idx1] - predictPositions[idx2];
     float currentDistance = glm::length(p1p2);
 
-    if (currentDistance > restDistance) {
+    float factor = isShrink ? 0.01f : 1.0f;
+
+    if (currentDistance > restDistance && !isShrink || currentDistance < restDistance && isShrink) {
         float invMass1 = invMasses[idx1];
         float invMass2 = invMasses[idx2];
         if (invMass1 + invMass2 > 0.0f) {
             float C = currentDistance - restDistance;
-            glm::vec3 gradient = p1p2 / (currentDistance + epsilon);
+            glm::vec3 gradient = p1p2 / (currentDistance + EPSILON);
             float deltaLambda = -C / (invMass1 + invMass2);
 
+            float factor = isShrink ? 0.01f : 1.0f;
             if (invMass1 > 0.0f) {
-                predictPositions[idx1] += gradient * deltaLambda * invMass1;
+                predictPositions[idx1] += gradient * deltaLambda * invMass1 * factor;
             }
             if (invMass2 > 0.0f) {
-                predictPositions[idx2] -= gradient * deltaLambda * invMass2;
+                predictPositions[idx2] -= gradient * deltaLambda * invMass2 * factor;
             }
         }
     }
@@ -171,13 +176,11 @@ __global__ void kernSolveStretch(
 __global__ void kernSolveBendingConstraints(
     glm::vec3* predPositions,     // Predicted positions of particles
     const float* invMasses,       // Inverse masses of particles
-    float* lambdas,
     const int numWidth,           // Number of particles along width
     const int numHeight,          // Number of particles along height
     const float constraintAngle,
     const float compliance,       // Compliance parameter
     float alpha,
-    float epsilon,
     int pos)                // Small value to prevent division by zero
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -199,29 +202,29 @@ __global__ void kernSolveBendingConstraints(
     if (pos == 0)
     {
         idx0 = 2 * (y * numWidth + x);
-        idx1 = 2 * (y * numWidth + x + 1);
-        idx2 = 2 * ((y + 1) * numWidth + x);
-        idx3 = 2 * ((y + 1) * numWidth + x + 1);
+        idx1 = idx0 + 1;
+        idx2 = idx0 + numWidth;
+        idx3 = idx2 + 1;
     }
-    else if (pos == 1)
+    else if (pos == 1 && 2 * x + 2 < numWidth)
     {
-        idx0 = 2 * (y * numWidth + x + 1);
-        idx1 = 2 * (y * numWidth + x + 2);
-        idx2 = 2 * ((y + 1) * numWidth + x + 1);
-        idx3 = 2 * ((y + 1) * numWidth + x + 2);
+        idx0 = 2 * (y * numWidth + x) + 1;
+        idx1 = idx0 + 1;
+        idx2 = idx0 + numWidth;
+        idx3 = idx2 + 1;
     }
-    else if (pos == 2)
+    else if (pos == 2 && 2 * y + 2 < numHeight)
     {
-        idx0 = 2 * ((y + 1) * numWidth + x);
-        idx1 = 2 * ((y + 1) * numWidth + x + 1);
-        idx2 = 2 * ((y + 2) * numWidth + x);
-        idx3 = 2 * ((y + 2) * numWidth + x + 1);
+        idx0 = 2 * (y * numWidth + x) + numWidth;
+        idx1 = idx0 + 1;
+        idx2 = idx0 + numWidth;
+        idx3 = idx2 + 1;
     }
-    else if (pos == 3) {
-        idx0 = 2 * ((y + 1) * numWidth + x + 1);
-        idx1 = 2 * ((y + 1) * numWidth + x + 2);
-        idx2 = 2 * ((y + 2) * numWidth + x + 1);
-        idx3 = 2 * ((y + 2) * numWidth + x + 2);
+    else if (pos == 3 && 2 * y + 2 < numHeight && 2 * x + 2 < numWidth) {
+        idx0 = 2 * (y * numWidth + x) + 1 + numWidth;
+        idx1 = idx0 + 1;
+        idx2 = idx0 + numWidth;
+        idx3 = idx2 + 1;
     }
 
     if (idx0 < 0 || idx1 < 0 || idx2 < 0 || idx3 < 0 || idx3 > totalConstraints)
@@ -235,9 +238,9 @@ __global__ void kernSolveBendingConstraints(
 
     // Fetch positions and inverse masses
     glm::vec3 p0 = predPositions[idx0];
-    glm::vec3 p1 = predPositions[idx1];
-    glm::vec3 p2 = predPositions[idx2];
-    glm::vec3 p3 = predPositions[idx3];
+    glm::vec3 p1 = predPositions[idx1] - p0;
+    glm::vec3 p2 = predPositions[idx2] - p0;
+    glm::vec3 p3 = predPositions[idx3] - p0;
 
     float w0 = invMasses[idx0];
     float w1 = invMasses[idx1];
@@ -245,10 +248,10 @@ __global__ void kernSolveBendingConstraints(
     float w3 = invMasses[idx3];
 
     // Compute normals for the bending plane
-    glm::vec3 n1 = glm::normalize(glm::cross(p2 - p0, p1 - p2));
-    glm::vec3 n2 = glm::normalize(glm::cross(p2 - p1, p3 - p2));
+    glm::vec3 n1 = glm::normalize(glm::cross(p1, p2));
+    glm::vec3 n2 = glm::normalize(glm::cross(p1, p3));
 
-    if (glm::length(n1) < epsilon || glm::length(n2) < epsilon) return;
+    if (glm::length(n1) < EPSILON || glm::length(n2) < EPSILON) return;
 
     // Compute the dot product and the current bending angle
     float d = glm::clamp(glm::dot(n1, n2), -1.0f, 1.0f);
@@ -261,12 +264,12 @@ __global__ void kernSolveBendingConstraints(
     // Compute constraint force and gradients
     float C = currentAngle - constraintAngle;
 
-    if (fabs(C) < epsilon || isnan(C)) return;
+    if (fabs(C) < EPSILON || isnan(C)) return;
 
-    glm::vec3 gradientP2 = (glm::cross(p1, n2) + d * glm::cross(n1, p1)) / (glm::length(glm::cross(p1, p2)) + epsilon);
-    glm::vec3 gradientP3 = (glm::cross(p1, n1) + d * glm::cross(n2, p1)) / (glm::length(glm::cross(p1, p3)) + epsilon);
-    glm::vec3 gradientP1 = -(glm::cross(p2, n2) + d * glm::cross(n1, p2)) / (glm::length(glm::cross(p1, p2)) + epsilon)
-        - (glm::cross(p3, n1) + d * glm::cross(n2, p3)) / (glm::length(glm::cross(p1, p3)) + epsilon);
+    glm::vec3 gradientP2 = (glm::cross(p1, n2) + d * glm::cross(n1, p1)) / (glm::length(glm::cross(p1, p2)) + EPSILON);
+    glm::vec3 gradientP3 = (glm::cross(p1, n1) + d * glm::cross(n2, p1)) / (glm::length(glm::cross(p1, p3)) + EPSILON);
+    glm::vec3 gradientP1 = -(glm::cross(p2, n2) + d * glm::cross(n1, p2)) / (glm::length(glm::cross(p1, p2)) + EPSILON)
+        - (glm::cross(p3, n1) + d * glm::cross(n2, p3)) / (glm::length(glm::cross(p1, p3)) + EPSILON);
     glm::vec3 gradientP0 = -gradientP1 - gradientP2 - gradientP3;
 
 
@@ -276,16 +279,16 @@ __global__ void kernSolveBendingConstraints(
         + w3 * glm::dot(gradientP3, gradientP3)
         + alpha;
 
-    if (denominator < epsilon) return;
+    if (denominator < EPSILON) return;
 
     // Compute delta lambda
-    float deltaLambda = (-C - lambdas[index] * alpha) / denominator;
-    lambdas[index] += deltaLambda;
+    float deltaLambda = glm::sqrt(1.0f - d*d) * C / denominator;
+
     // Update predicted positions
-    if (w0 > 0) predPositions[idx0] += deltaLambda * w0 * gradientP0;
-    if (w1 > 0) predPositions[idx1] += deltaLambda * w1 * gradientP1;
-    if (w2 > 0) predPositions[idx2] += deltaLambda * w2 * gradientP2;
-    if (w3 > 0) predPositions[idx3] += deltaLambda * w3 * gradientP3;
+    predPositions[idx0] += deltaLambda * w0 * gradientP0;
+    predPositions[idx1] += deltaLambda * w1 * gradientP1;
+    predPositions[idx2] += deltaLambda * w2 * gradientP2;
+    predPositions[idx3] += deltaLambda * w3 * gradientP3;
 }
 
 
@@ -332,9 +335,9 @@ __global__ void kernSolveCollisionCube(glm::vec3* predPositions, glm::vec3* posi
     if (diff.x > -halfExtents.x && diff.x<halfExtents.x
         && diff.y>-halfExtents.y && diff.y < halfExtents.y
         && diff.z>-halfExtents.z && diff.z < halfExtents.z) {
-        float dx = diff.x > 0 ? halfExtents.x + 0.01 - diff.x : -halfExtents.x - 0.01 - diff.x;
-        float dy = diff.y > 0 ? halfExtents.y + 0.01 - diff.y : -halfExtents.y - 0.01 - diff.y;
-        float dz = diff.z > 0 ? halfExtents.z + 0.01 - diff.z : -halfExtents.z - 0.01 - diff.z;
+        float dx = diff.x > 0 ? halfExtents.x - diff.x : -halfExtents.x - diff.x;
+        float dy = diff.y > 0 ? halfExtents.y - diff.y : -halfExtents.y - diff.y;
+        float dz = diff.z > 0 ? halfExtents.z - diff.z : -halfExtents.z - diff.z;
         if (abs(dx) <= abs(dy) && abs(dx) <= abs(dz)) {
             offset = glm::vec3(dx, 0.0f, 0.0f);
         }
@@ -435,16 +438,37 @@ void ClothSolver::UpdateVelocityAndWriteBack(dim3 blocksPerGrid, dim3 threadsPer
 }
 
 
-void ClothSolver::SolveStretchConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predictPositions, const glm::vec3* positions, const float* invMasses, const float constraintsDistances, const int numWidth, const int numHeight, int numConstraints, float epsilon, int updateDirection) {
-	kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, numConstraints, epsilon, updateDirection);
+void ClothSolver::SolveStretchConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predictPositions, const glm::vec3* positions, const float* invMasses, const float constraintsDistances, const int numWidth, const int numHeight) {
+	kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 0, false);
+    cudaDeviceSynchronize();
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 1, false);
+    cudaDeviceSynchronize();
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 2, false);
+    cudaDeviceSynchronize();
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 3, false);
+    cudaDeviceSynchronize();
+
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 0, true);
+    cudaDeviceSynchronize();
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 1, true);
+    cudaDeviceSynchronize();
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 2, true);
+    cudaDeviceSynchronize();
+    kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, 3, true);
     cudaDeviceSynchronize();
 }
 
-void ClothSolver::SolveBendingConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, float* lambdas, const int numWidth, const int numHeight, const float constraintDistance, const float compliance, float alpha, float epsilon) {
-	kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, lambdas, numWidth, numHeight, constraintDistance, compliance, alpha, epsilon, 0);
-    kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, lambdas, numWidth, numHeight, constraintDistance, compliance, alpha, epsilon, 1);
-	kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, lambdas, numWidth, numHeight, constraintDistance, compliance, alpha, epsilon, 2);
-	kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, lambdas, numWidth, numHeight, constraintDistance, compliance, alpha, epsilon, 3);
+void ClothSolver::SolveBendingConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, const float* invMasses, const int numWidth, const int numHeight, const float constraintDistance, const float compliance, float alpha) {
+	kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, numWidth, numHeight, constraintDistance, compliance, alpha, 0);
+    cudaDeviceSynchronize();
+
+    kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, numWidth, numHeight, constraintDistance, compliance, alpha, 1);
+    cudaDeviceSynchronize();
+
+    kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, numWidth, numHeight, constraintDistance, compliance, alpha, 2);
+    cudaDeviceSynchronize();
+
+    kernSolveBendingConstraints << <blocksPerGrid, threadsPerBlock >> > (predPositions, invMasses, numWidth, numHeight, constraintDistance, compliance, alpha, 3);
 	cudaDeviceSynchronize();
 }
 
