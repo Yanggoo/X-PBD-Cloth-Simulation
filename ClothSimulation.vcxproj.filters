@@ -114,6 +114,12 @@
     <ClInclude Include="source\imgui_impl_opengl2.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="source\Grid3D.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Triangle.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="source\SolverKernel.cu" />
