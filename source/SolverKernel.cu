@@ -55,7 +55,7 @@ __global__ void kernSolveStretch(
     const float* invMasses,
     const float constraintsDistances, const int numWidth, const int numHeight,
     int numConstraints,
-    float epsilon, int updateDirection)
+    float epsilon, int updateDirection, bool isShrink)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -149,7 +149,7 @@ __global__ void kernSolveStretch(
     glm::vec3 p1p2 = predictPositions[idx1] - predictPositions[idx2];
     float currentDistance = glm::length(p1p2);
 
-    if (currentDistance > restDistance) {
+    if (currentDistance > restDistance && !isShrink || currentDistance < restDistance && isShrink) {
         float invMass1 = invMasses[idx1];
         float invMass2 = invMasses[idx2];
         if (invMass1 + invMass2 > 0.0f) {
@@ -157,11 +157,12 @@ __global__ void kernSolveStretch(
             glm::vec3 gradient = p1p2 / (currentDistance + epsilon);
             float deltaLambda = -C / (invMass1 + invMass2);
 
+            float factor = isShrink ? 0.01f : 1.0f;
             if (invMass1 > 0.0f) {
-                predictPositions[idx1] += gradient * deltaLambda * invMass1;
+                predictPositions[idx1] += gradient * deltaLambda * invMass1 * factor;
             }
             if (invMass2 > 0.0f) {
-                predictPositions[idx2] -= gradient * deltaLambda * invMass2;
+                predictPositions[idx2] -= gradient * deltaLambda * invMass2 * factor;
             }
         }
     }
@@ -435,8 +436,8 @@ void ClothSolver::UpdateVelocityAndWriteBack(dim3 blocksPerGrid, dim3 threadsPer
 }
 
 
-void ClothSolver::SolveStretchConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predictPositions, const glm::vec3* positions, const float* invMasses, const float constraintsDistances, const int numWidth, const int numHeight, int numConstraints, float epsilon, int updateDirection) {
-	kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, numConstraints, epsilon, updateDirection);
+void ClothSolver::SolveStretchConstraints(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predictPositions, const glm::vec3* positions, const float* invMasses, const float constraintsDistances, const int numWidth, const int numHeight, int numConstraints, float epsilon, int updateDirection, bool isShrink) {
+	kernSolveStretch << <blocksPerGrid, threadsPerBlock >> > (predictPositions, positions, invMasses, constraintsDistances, numWidth, numHeight, numConstraints, epsilon, updateDirection, isShrink);
     cudaDeviceSynchronize();
 }
 

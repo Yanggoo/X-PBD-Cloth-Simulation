@@ -140,11 +140,15 @@ void ClothSolverGPU::Simulate(float deltaTime) {
                 int clothParticleCount = width * height;
                 //dim3 smallBlocksPerGrid = dim3(blocksPerGrid.x / 2, blocksPerGrid.y / 2, blocksPerGrid.z);
                 // todo constrains
-                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 0);
-                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 1);
-                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 2);
-                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 3);
-                cudaDeviceSynchronize();
+                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 0, false);
+                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 1, false);
+                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 2, false);
+                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 3, false);
+
+                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 0, true);
+                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 1, true);
+                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 2, true);
+                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 3, true);
 
                 auto alpha = 700 / (deltaTime * deltaTime + 1e-6);
                 dim3 largeBlocksPerGrid = dim3(blocksPerGrid.x/2,blocksPerGrid.y/2,blocksPerGrid.z);
