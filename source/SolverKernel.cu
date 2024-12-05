@@ -161,6 +161,7 @@ __global__ void kernSolveStretch(
             glm::vec3 gradient = p1p2 / (currentDistance + EPSILON);
             float deltaLambda = -C / (invMass1 + invMass2);
 
+            float factor = isShrink ? 0.01f : 1.0f;
             if (invMass1 > 0.0f) {
                 predictPositions[idx1] += gradient * deltaLambda * invMass1 * factor;
             }
