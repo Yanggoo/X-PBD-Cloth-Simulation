@@ -4,7 +4,7 @@
 
 #define FRICTION 0.1f
 #define EPSILON 1e-6f
-#define PARTICLE_MIN_DISTANCE 0.01f
+#define PARTICLE_MIN_DISTANCE 0.025f
 #define GRAVITY 30.0f
 
 using namespace ClothSolver;
