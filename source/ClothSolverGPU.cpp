@@ -26,7 +26,7 @@ ClothSolverGPU::ClothSolverGPU() :
     dev_invMass(nullptr), dev_neighbors(nullptr), particleCount(0), m_currentOffset(0), m_ConstraintDistances(0), m_KDTree(host_position)
 {
     m_Substeps = 5;
-    m_IterationNum = 5;
+    m_IterationNum = 10;
 }
 
 ClothSolverGPU::~ClothSolverGPU() {
@@ -167,7 +167,7 @@ void ClothSolverGPU::Simulate(float deltaTime) {
 
         }
 
-        ClothSolver::UpdateVelocityAndWriteBack(clothBlockPerGrid, clothThreadPerBlock, dev_position, dev_predictPosition, dev_velocity, deltaTimeInSubstep, 0.1f, particleCount);
+        ClothSolver::UpdateVelocityAndWriteBack(clothBlockPerGrid, clothThreadPerBlock, dev_position, dev_predictPosition, dev_velocity, deltaTimeInSubstep, damping, particleCount);
         
         cudaDeviceSynchronize();
     }

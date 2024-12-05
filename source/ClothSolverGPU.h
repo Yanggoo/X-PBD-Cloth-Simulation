@@ -32,6 +32,8 @@ private:
     };
 
     void CopyBackToCPU();
+
+    const float damping = 1.0f;
     
     size_t particleCount;
     int m_Substeps;

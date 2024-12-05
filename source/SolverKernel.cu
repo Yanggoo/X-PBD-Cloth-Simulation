@@ -5,6 +5,7 @@
 #define FRICTION 0.1f
 #define EPSILON 1e-6f
 #define PARTICLE_MIN_DISTANCE 0.01f
+#define GRAVITY 30.0f
 
 using namespace ClothSolver;
 
@@ -38,7 +39,7 @@ __global__ void kernCalculatePredictPosition(glm::vec3* position, glm::vec3* pre
 
     if(invMasses[index] == 0.0f) return;
     glm::vec3 pos = position[index];
-    velocity[index] += glm::vec3(0, -9.8, 0) * deltaTime;
+    velocity[index] += glm::vec3(0, -GRAVITY, 0) * deltaTime;
     velocity[index] = velocity[index] * glm::clamp((1.0f - deltaTime), 0.0f, 1.0f);
     predictPosition[index] = pos + velocity[index] * deltaTime;
 }
