@@ -1,3 +1,3 @@
 #pragma once
 
-#define USE_GPU_SOLVER 0
+#define USE_GPU_SOLVER 1

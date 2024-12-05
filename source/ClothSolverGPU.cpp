@@ -61,7 +61,6 @@ void ClothSolverGPU::ResponsibleFor(Cloth* cloth)
     host_predictPosition.reserve(m_currentOffset);
     host_velocity.reserve(m_currentOffset);
     host_invMass.reserve(m_currentOffset);
-    host_lambdas.reserve(m_currentOffset);
 
     particleCount = m_currentOffset;
 
@@ -73,7 +72,6 @@ void ClothSolverGPU::ResponsibleFor(Cloth* cloth)
             host_predictPosition.push_back(cloth->m_Particles[idx].GetPosition());
             host_velocity.emplace_back(0.0f);
             host_invMass.push_back(cloth->m_Particles[idx].m_InvMass);
-            host_lambdas.push_back(0.0f);
         }
     }
 
@@ -138,18 +136,14 @@ void ClothSolverGPU::Simulate(float deltaTime) {
                 int width = clothData.m_width;
                 int height = clothData.m_height;
                 int clothParticleCount = width * height;
-                //dim3 smallBlocksPerGrid = dim3(blocksPerGrid.x / 2, blocksPerGrid.y / 2, blocksPerGrid.z);
                 // todo constrains
-                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 0);
-                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 1);
-                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 2);
-                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height, clothParticleCount, 1e-6, 3);
+                ClothSolver::SolveStretchConstraints(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, m_ConstraintDistances, width, height);
                 cudaDeviceSynchronize();
 
-                auto alpha = 700 / (deltaTime * deltaTime + 1e-6);
-                dim3 largeBlocksPerGrid = dim3(blocksPerGrid.x/2,blocksPerGrid.y/2,blocksPerGrid.z);
+                auto bendComplience = 10;
+                auto alpha = bendComplience / (deltaTime * deltaTime + 1e-6);
                 dim3 smallThreadsPerBlock = dim3(threadsPerBlock.x/2, threadsPerBlock.y/2, threadsPerBlock.z);
-                ClothSolver::SolveBendingConstraints(blocksPerGrid, smallThreadsPerBlock, dev_predictPosition + offset, dev_invMass + offset, dev_lambdas + offset, width, height, glm::radians(180.f), 700, alpha, 1e-6);
+                ClothSolver::SolveBendingConstraints(blocksPerGrid, smallThreadsPerBlock, dev_predictPosition + offset, dev_invMass + offset, width, height, glm::radians(180.f), bendComplience, alpha);
 
                 for (size_t i = 0; i < m_Colliders.size(); i++) {
                     Collider* collider = m_Colliders[i];
@@ -191,8 +185,6 @@ void ClothSolverGPU::OnInitFinish() {
     checkCUDAErrorWithLine("cudaMalloc dev_velocity failed!");
     cudaMalloc((void**)&dev_invMass, particleCount * sizeof(float));
     checkCUDAErrorWithLine("cudaMalloc dev_invMass failed!");
-    cudaMalloc((void**)&dev_lambdas, particleCount * sizeof(float));
-    checkCUDAErrorWithLine("cudaMalloc dev_lambdas failed!");
     cudaMalloc((void**)&dev_neighbors, particleCount * COLLISION_NEIGHBOR_COUNT * sizeof(int));
     checkCUDAErrorWithLine("cudaMalloc dev_lambdas failed!");
 
@@ -204,13 +196,10 @@ void ClothSolverGPU::OnInitFinish() {
     checkCUDAErrorWithLine("cudaMemcpy to dev_velocity failed!");
     cudaMemcpy(dev_invMass, &host_invMass[0], particleCount * sizeof(float), cudaMemcpyHostToDevice);
     checkCUDAErrorWithLine("cudaMemcpy to dev_invMass failed!");
-    cudaMemcpy(dev_lambdas, &host_lambdas[0], particleCount * sizeof(float), cudaMemcpyHostToDevice);
-    checkCUDAErrorWithLine("cudaMemcpy to dev_lambdas failed!");
 
     host_predictPosition.clear();
     host_velocity.clear();
     host_invMass.clear();
-    host_lambdas.clear();
 
     cudaDeviceSynchronize();
 
