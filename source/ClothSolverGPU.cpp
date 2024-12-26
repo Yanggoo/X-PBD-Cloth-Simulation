@@ -151,10 +151,12 @@ void ClothSolverGPU::Simulate(float deltaTime) {
                 for (size_t i = 0; i < m_Colliders.size(); i++) {
                     Collider* collider = m_Colliders[i];
                     if (Sphere* sphere = dynamic_cast<Sphere*>(collider)) {
-                        ClothSolver::SolveCollisionSphere(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset, dev_invMass + offset, sphere->m_Position, sphere->m_Radius);
+                        ClothSolver::SolveCollisionSphere(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, 
+                            dev_position + offset, dev_invMass + offset, sphere->m_Position, sphere->m_Radius);
                     }
                     else if (Cube* cube = dynamic_cast<Cube*>(collider)) {
-                        ClothSolver::SolveCollisionCube(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, dev_position + offset,  dev_invMass + offset, cube->m_Position, cube->m_Dimensions);
+                        ClothSolver::SolveCollisionCube(blocksPerGrid, threadsPerBlock, dev_predictPosition + offset, 
+                            dev_position + offset,  dev_invMass + offset, cube->m_Position, cube->m_Dimensions);
                     }
                 }
 

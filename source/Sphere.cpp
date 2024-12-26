@@ -29,12 +29,12 @@ void Sphere::FixedUpdate(float deltaTime)
 
 void Sphere::Draw()
 {
-	glPushMatrix();
-	glTranslatef(m_Position.x, m_Position.y, m_Position.z);
-	static const glm::vec3 color(0.0f, 0.0f, 1.0f);
-	glColor3fv((GLfloat*)&color);
-	glutSolidSphere(m_Radius, 20, 20);
-	glPopMatrix();
+	//glPushMatrix();
+	//glTranslatef(m_Position.x, m_Position.y, m_Position.z);
+	//static const glm::vec3 color(0.0f, 0.0f, 1.0f);
+	//glColor3fv((GLfloat*)&color);
+	//glutSolidSphere(m_Radius, 20, 20);
+	//glPopMatrix();
 }
 
 void Sphere::Initialize(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)

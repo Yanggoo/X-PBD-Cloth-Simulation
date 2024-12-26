@@ -3,6 +3,7 @@
     "freeglut",
     "glm",
     "nanoflann",
-    "imgui"
+    "imgui",
+    "glew"
   ]
 }

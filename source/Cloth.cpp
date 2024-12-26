@@ -1,4 +1,6 @@
 #include "Cloth.h"
+
+#include <GL/glew.h>
 #include <GL/glut.h>
 
 Cloth::Cloth(float width, float height, int num_width, int num_height, bool fixed, glm::vec3 color) : m_NumWidth(num_width), m_NumHeight(num_height), m_Width(width), m_Height(height), m_Fixed(fixed), m_Color(color)
@@ -17,7 +19,48 @@ Cloth::Cloth(float width, float height, int num_width, int num_height, bool fixe
 		}
 	}
 
+	int indexCount = 6 * (m_NumWidth - 1) * (m_NumHeight - 1);
+    unsigned int* indices = new unsigned int[indexCount];
+	for (int w = 0; w < m_NumWidth - 1; w++) {
+		for (int h = 0; h < m_NumHeight - 1; h++) {
+            indices[(w * (m_NumHeight - 1) + h) * 6 + 0] = w * m_NumWidth + h;
+            indices[(w * (m_NumHeight - 1) + h) * 6 + 1] = w * m_NumWidth + h + 1;
+            indices[(w * (m_NumHeight - 1) + h) * 6 + 2] = (w + 1) * m_NumWidth + h;
 
+            indices[(w * (m_NumHeight - 1) + h) * 6 + 3] = w * m_NumWidth + h + 1;
+            indices[(w * (m_NumHeight - 1) + h) * 6 + 4] = (w + 1) * m_NumWidth + h + 1;
+            indices[(w * (m_NumHeight - 1) + h) * 6 + 5] = (w + 1) * m_NumWidth + h;
+		}
+	}
+
+	//unsigned int VAO;
+	//unsigned int VBO;
+	glGenVertexArrays(1, &m_vao);
+	glGenBuffers(1, &m_vbo);
+
+	glBindVertexArray(m_vao);
+	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+
+	glBufferData(GL_ARRAY_BUFFER, m_Particles.size() * sizeof(Particle), &m_Particles[0], GL_STATIC_DRAW);
+
+	unsigned int EBO;
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(unsigned int), indices, GL_STATIC_DRAW);
+
+	// location 0 vec3 position
+	glEnableVertexAttribArray(0); // enable the attribute at location 0
+	glVertexAttribPointer(
+		0,               // location of the attribute in the vertex shader
+		3,               // number of components (x, y, z)
+		GL_FLOAT,        // data type
+		GL_FALSE,        // whether to normalize
+		sizeof(Particle),// stride (distance between consecutive vertex attributes)
+		(void*) 0        // offset in the array (where does the position data start?)
+	);
+
+	glBindVertexArray(0);
+	//glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 Cloth::~Cloth()
@@ -36,23 +79,34 @@ void Cloth::FixedUpdate(float deltaTime)
 
 void Cloth::Draw()
 {
-	glPushMatrix();
+	glBindVertexArray(m_vao);
 
-	glBegin(GL_TRIANGLES);
-	for (int w = 0; w < m_NumWidth - 1; w++) {
-		for (int h = 0; h < m_NumHeight - 1; h++) {
-			glm::vec3 col = m_Color;
-			int wIdx = w * 6 / m_NumWidth;
-			int hIdx = h * 6 / m_NumHeight;
-			if (wIdx % 2 == hIdx % 2)
-			{ col = glm::vec3(1.0f, 1.0f, 1.0f); }
-			DrawTriangle(GetParticle(w + 1, h), GetParticle(w, h), GetParticle(w, h + 1), col);
-			DrawTriangle(GetParticle(w + 1, h + 1), GetParticle(w + 1, h), GetParticle(w, h + 1), col);
-		}
-	}
-	glEnd();
+	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
 
-	glPopMatrix();
+	glBufferData(GL_ARRAY_BUFFER, m_Particles.size() * sizeof(Particle), &m_Particles[0], GL_STATIC_DRAW);
+
+	// 5. Issue the draw call
+	glDrawElements(GL_TRIANGLES, (m_NumWidth - 1) * (m_NumHeight - 1) * 2, GL_UNSIGNED_INT, 0);
+
+	glBindVertexArray(0);
+
+	//glPushMatrix();
+
+	//glBegin(GL_TRIANGLES);
+	//for (int w = 0; w < m_NumWidth - 1; w++) {
+	//	for (int h = 0; h < m_NumHeight - 1; h++) {
+	//		glm::vec3 col = m_Color;
+	//		int wIdx = w * 6 / m_NumWidth;
+	//		int hIdx = h * 6 / m_NumHeight;
+	//		if (wIdx % 2 == hIdx % 2)
+	//		{ col = glm::vec3(1.0f, 1.0f, 1.0f); }
+	//		DrawTriangle(GetParticle(w + 1, h), GetParticle(w, h), GetParticle(w, h + 1), col);
+	//		DrawTriangle(GetParticle(w + 1, h + 1), GetParticle(w + 1, h), GetParticle(w, h + 1), col);
+	//	}
+	//}
+	//glEnd();
+
+	//glPopMatrix();
 }
 
 void Cloth::Initialize(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)
@@ -67,10 +121,10 @@ void Cloth::Initialize(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)
 
 void Cloth::DrawTriangle(Particle* p1, Particle* p2, Particle* p3, const glm::vec3 color)
 {
-	glColor3fv((GLfloat*)&color);
-	glVertex3fv((GLfloat*)&(p1->GetPosition()));
-	glVertex3fv((GLfloat*)&(p2->GetPosition()));
-	glVertex3fv((GLfloat*)&(p3->GetPosition()));
+	//glColor3fv((GLfloat*)&color);
+	//glVertex3fv((GLfloat*)&(p1->GetPosition()));
+	//glVertex3fv((GLfloat*)&(p2->GetPosition()));
+	//glVertex3fv((GLfloat*)&(p3->GetPosition()));
 }
 
 Particle* Cloth::GetParticle(int w, int h)

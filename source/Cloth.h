@@ -29,5 +29,8 @@ private:
 	glm::vec3 m_Color;
 	std::vector<Particle> m_Particles;
 	ClothSolverBase* m_ClothSolver;
+
+	unsigned int m_vao;
+	unsigned int m_vbo;
 };
 

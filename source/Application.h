@@ -1,10 +1,14 @@
 #pragma once
+
+#include <GL/glew.h>
+#include <GL/freeglut.h>
+
 #include "Timer.h"
 #include "Scene.h"
 class Application
 {
 public:
-	Application() :m_Timer(), m_IterationNum(20), m_Window(-1), m_AppRunning(false), m_Scene(){};
+	Application() :m_Timer(), m_IterationNum(20), m_Window(-1), m_AppRunning(false), m_Scene(this){};
 	void Initialize(int argc, char* argv[]);
 	void Run();
 	void End();
@@ -26,5 +30,8 @@ private:
 	glm::vec3 m_SelectedParticleDestinPosition;
 	bool isMouseDown = false;
 	float selectedParticleZ;
+
+public:
+	glm::mat4 m_mvp;
 };
 

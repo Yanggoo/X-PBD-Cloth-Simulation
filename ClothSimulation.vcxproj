@@ -61,6 +61,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -80,6 +81,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -104,6 +106,7 @@
     <ClCompile Include="source\Actor.cpp" />
     <ClCompile Include="source\imgui_impl_glut.cpp" />
     <ClCompile Include="source\imgui_impl_opengl2.cpp" />
+    <ClCompile Include="source\imgui_impl_opengl3.cpp" />
     <ClCompile Include="source\Scene.cpp" />
     <ClCompile Include="source\Appilcation.cpp" />
     <ClCompile Include="source\main.cpp" />
@@ -121,6 +124,8 @@
     <ClInclude Include="source\Globals.h" />
     <ClInclude Include="source\imgui_impl_glut.h" />
     <ClInclude Include="source\imgui_impl_opengl2.h" />
+    <ClInclude Include="source\imgui_impl_opengl3.h" />
+    <ClInclude Include="source\imgui_impl_opengl3_loader.h" />
     <ClInclude Include="source\Particle.h" />
     <ClInclude Include="source\Cloth.h" />
     <ClInclude Include="source\Actor.h" />
@@ -134,6 +139,9 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="source\SolverKernel.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="source\shaders\vertex.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -22,18 +22,18 @@ void Cube::FixedUpdate(float deltaTime)
 // Draw method
 void Cube::Draw()
 {
-	glPushMatrix();
-	glTranslatef(m_Position.x, m_Position.y, m_Position.z);
+	//glPushMatrix();
+	//glTranslatef(m_Position.x, m_Position.y, m_Position.z);
 
-	// Set color
-	static const glm::vec3 color(1.0f, 0.0f, 0.0f);
-	glColor3fv(glm::value_ptr(color));
+	//// Set color
+	//static const glm::vec3 color(1.0f, 0.0f, 0.0f);
+	//glColor3fv(glm::value_ptr(color));
 
-	// Scale and draw a unit cube
-	glScalef(m_Dimensions.x, m_Dimensions.y, m_Dimensions.z);
-	glutSolidCube(1.0f);
+	//// Scale and draw a unit cube
+	//glScalef(m_Dimensions.x, m_Dimensions.y, m_Dimensions.z);
+	//glutSolidCube(1.0f);
 
-	glPopMatrix();
+	//glPopMatrix();
 }
 
 void Cube::Initialize(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)

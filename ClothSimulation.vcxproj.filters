@@ -60,6 +60,9 @@
     <ClCompile Include="source\imgui_impl_opengl2.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="source\imgui_impl_opengl3.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Application.h">
@@ -120,8 +123,17 @@
     <ClInclude Include="source\Triangle.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="source\imgui_impl_opengl3_loader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="source\imgui_impl_opengl3.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="source\SolverKernel.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="source\shaders\vertex.glsl" />
   </ItemGroup>
 </Project>

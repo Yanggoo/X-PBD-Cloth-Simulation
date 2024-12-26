@@ -4,7 +4,7 @@
 
 #define FRICTION 0.1f
 #define EPSILON 1e-6f
-#define PARTICLE_MIN_DISTANCE 0.025f
+#define PARTICLE_MIN_DISTANCE 0.02f
 #define GRAVITY 30.0f
 
 using namespace ClothSolver;
@@ -320,7 +320,8 @@ __global__ void kernSolveBendingConstraints(
 }
 
 
-__global__ void kernSolveCollisionSphere(glm::vec3* predPositions, glm::vec3* positions, const float* invMasses, glm::vec3 center, float radius)
+__global__ void kernSolveCollisionSphere(glm::vec3* predPositions, glm::vec3* positions, const float* invMasses, 
+    glm::vec3 center, float radius)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -519,7 +520,8 @@ void ClothSolver::SolveBendingConstraints(dim3 blocksPerGrid, dim3 threadsPerBlo
 	cudaDeviceSynchronize();
 }
 
-void ClothSolver::SolveCollisionSphere(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, glm::vec3* positions, const float* invMasses, glm::vec3 center, float radius)
+void ClothSolver::SolveCollisionSphere(dim3 blocksPerGrid, dim3 threadsPerBlock, glm::vec3* predPositions, glm::vec3* positions, 
+    const float* invMasses, glm::vec3 center, float radius)
 {
     kernSolveCollisionSphere << <blocksPerGrid, threadsPerBlock >> > (predPositions, positions, invMasses, center, radius);
 }

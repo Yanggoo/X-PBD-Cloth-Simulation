@@ -1,8 +1,9 @@
 #include "Application.h"
-#include <GL/freeglut.h>
+
 #include "Timer.h"
 #include "imgui.h"
-#include "imgui_impl_opengl2.h"
+//#include "imgui_impl_opengl2.h"
+#include "imgui_impl_opengl3.h"
 #include "imgui_impl_glut.h"
 
 // Forward declaration of the static display functions
@@ -17,12 +18,7 @@ Application* appInstance = nullptr;
 
 void Application::Initialize(int argc, char* argv[])
 {
-	// Configure OpenGL
-	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
-	glutInitWindowSize(640, 480);
-	glutCreateWindow("Cloth Simulation");
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	//glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	// Set the global instance pointer to this instance
 	appInstance = this;
@@ -45,16 +41,12 @@ void Application::Initialize(int argc, char* argv[])
 	io.Fonts->AddFontDefault();
 	ImGui_ImplGLUT_Init();
 	ImGui_ImplGLUT_InstallFuncs();
-	ImGui_ImplOpenGL2_Init();
+	ImGui_ImplOpenGL3_Init();
 
-	// Restore OpenGL state
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glViewport(0, 0, 640, 480);
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
+	glDepthFunc(GL_LESS);
+
+    Reshape(640, 480);
 
 	// Re-register callback functions after ImGui installation
 	glutDisplayFunc(DisplayWrapper);
@@ -78,37 +70,46 @@ void Application::Run()
 
 void Application::End()
 {
-	ImGui_ImplOpenGL2_Shutdown();
+	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGLUT_Shutdown();
 	ImGui::DestroyContext();
 }
 
 void Application::Reshape(int width, int height)
 {
-	static GLfloat lightPosition[4] = { 0.0f, 2.5f, 5.5f, 1.0f };
-	static GLfloat lightDiffuse[3] = { 1.0f, 1.0f, 1.0f };
-	static GLfloat lightAmbient[3] = { 0.25f, 0.25f, 0.25f };
-	static GLfloat lightSpecular[3] = { 1.0f, 1.0f, 1.0f };
+	//static GLfloat lightPosition[4] = { 0.0f, 2.5f, 5.5f, 1.0f };
+	//static GLfloat lightDiffuse[3] = { 1.0f, 1.0f, 1.0f };
+	//static GLfloat lightAmbient[3] = { 0.25f, 0.25f, 0.25f };
+	//static GLfloat lightSpecular[3] = { 1.0f, 1.0f, 1.0f };
 
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
+	//glEnable(GL_LIGHTING);
+	//glEnable(GL_LIGHT0);
 
-	glShadeModel(GL_SMOOTH);
+	//glShadeModel(GL_SMOOTH);
 
 	glViewport(0, 0, width, height);
 
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(30.0, (double)width / (double)height, 0.0001f, 1000.0f);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
+	//glMatrixMode(GL_PROJECTION);
+	//glLoadIdentity();
+	//gluPerspective(30.0, (double)width / (double)height, 0.0001f, 1000.0f);
+	//glMatrixMode(GL_MODELVIEW);
+	//glLoadIdentity();
 
-	gluLookAt(0.0f, 0.0f, 5.0f, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+	//gluLookAt(0.0f, 0.0f, 5.0f, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
-	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+    float aspectRatio = (float)width / (float)height;
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
+    glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+	glm::mat4 projection = glm::perspective(glm::radians(30.0f), aspectRatio, 0.001f, 1000.0f);
+	glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
+	glm::mat4 model = glm::mat4(1.0f);
+    m_mvp = projection * view * model;
+
+	//glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+	//glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+	//glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+	//glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
 
 	// Update ImGui DisplaySize
 	ImGuiIO& io = ImGui::GetIO();
@@ -143,16 +144,16 @@ void Application::Display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
-	glDepthFunc(GL_LESS);
-	glEnable(GL_COLOR_MATERIAL);
-	glEnable(GL_NORMALIZE);
+	//glEnable(GL_DEPTH_TEST);
+	////glEnable(GL_LIGHTING);
+	//glDepthFunc(GL_LESS);
+	//glEnable(GL_COLOR_MATERIAL);
+	//glEnable(GL_NORMALIZE);
 
 	m_Scene.Draw();
 
 	// ImGui rendering
-	ImGui_ImplOpenGL2_NewFrame();
+	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGLUT_NewFrame();
 	ImGui::NewFrame();
 
@@ -176,7 +177,7 @@ void Application::Display(void)
 	ImGui::End();
 
 	ImGui::Render();
-	ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	glutSwapBuffers();
 }
