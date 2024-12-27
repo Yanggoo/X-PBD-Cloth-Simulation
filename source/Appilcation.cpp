@@ -88,6 +88,8 @@ void Application::Reshape(int width, int height)
 	//glShadeModel(GL_SMOOTH);
 
 	glViewport(0, 0, width, height);
+	m_width = width;
+	m_height = height;
 
 	//glMatrixMode(GL_PROJECTION);
 	//glLoadIdentity();
@@ -104,7 +106,7 @@ void Application::Reshape(int width, int height)
 	glm::mat4 projection = glm::perspective(glm::radians(30.0f), aspectRatio, 0.001f, 1000.0f);
 	glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
 	glm::mat4 model = glm::mat4(1.0f);
-    m_mvp = projection * view * model;
+    //m_mvp = projection * view * model;
 
 	//glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 	//glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);

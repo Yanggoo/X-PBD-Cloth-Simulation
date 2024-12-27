@@ -2,7 +2,10 @@
 #include "Actor.h"
 #include "Particle.h"
 #include <vector>
+#include <memory>
 #include "ClothSolverBase.h"
+
+class Scene;
 
 class Cloth :
     public Actor
@@ -10,7 +13,7 @@ class Cloth :
 	friend class ClothSolverCPU;
 	friend class ClothSolverGPU;
 public:
-	Cloth(float width, float height, int num_width, int num_height,bool fixed = false,glm::vec3 color=glm::vec3(1.0f, 0.6f, 0.6f));
+	Cloth(Scene* scene, float width, float height, int num_width, int num_height,bool fixed = false,glm::vec3 color=glm::vec3(1.0f, 0.6f, 0.6f));
 	~Cloth();
 	void Update(float deltaTime) override;
 	void FixedUpdate(float deltaTime) override;
@@ -29,6 +32,7 @@ private:
 	glm::vec3 m_Color;
 	std::vector<Particle> m_Particles;
 	ClothSolverBase* m_ClothSolver;
+    Scene* m_Scene;
 
 	unsigned int m_vao;
 	unsigned int m_vbo;

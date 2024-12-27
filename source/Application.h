@@ -20,6 +20,9 @@ public:
 	void Mouse(int button, int state, int x, int y);
 	void MouseMotion(int x, int y);
 
+    float GetWidth() { return m_width; }
+    float GetHeight() { return m_height; }
+
 private:
 	ClothSimulation::Timer	m_Timer;
 	int		m_IterationNum;
@@ -30,8 +33,10 @@ private:
 	glm::vec3 m_SelectedParticleDestinPosition;
 	bool isMouseDown = false;
 	float selectedParticleZ;
+	float m_width;
+	float m_height;
 
-public:
-	glm::mat4 m_mvp;
+//public:
+//	glm::mat4 m_mvp;
 };
 

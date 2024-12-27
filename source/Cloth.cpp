@@ -3,7 +3,10 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 
-Cloth::Cloth(float width, float height, int num_width, int num_height, bool fixed, glm::vec3 color) : m_NumWidth(num_width), m_NumHeight(num_height), m_Width(width), m_Height(height), m_Fixed(fixed), m_Color(color)
+#include "Scene.h"
+
+Cloth::Cloth(Scene* scene, float width, float height, int num_width, int num_height, bool fixed, glm::vec3 color) : m_NumWidth(num_width), m_NumHeight(num_height), 
+m_Width(width), m_Height(height), m_Fixed(fixed), m_Color(color), m_Scene(scene)
 {
 	assert(m_NumWidth > 1 && m_NumHeight > 1);
 	m_Particles.reserve(m_NumWidth * m_NumHeight);
@@ -23,13 +26,13 @@ Cloth::Cloth(float width, float height, int num_width, int num_height, bool fixe
     unsigned int* indices = new unsigned int[indexCount];
 	for (int w = 0; w < m_NumWidth - 1; w++) {
 		for (int h = 0; h < m_NumHeight - 1; h++) {
-            indices[(w * (m_NumHeight - 1) + h) * 6 + 0] = w * m_NumWidth + h;
-            indices[(w * (m_NumHeight - 1) + h) * 6 + 1] = w * m_NumWidth + h + 1;
-            indices[(w * (m_NumHeight - 1) + h) * 6 + 2] = (w + 1) * m_NumWidth + h;
+            indices[(w * (m_NumHeight - 1) + h) * 6 + 0] = w * m_NumHeight + h;
+            indices[(w * (m_NumHeight - 1) + h) * 6 + 1] = w * m_NumHeight + h + 1;
+            indices[(w * (m_NumHeight - 1) + h) * 6 + 2] = (w + 1) * m_NumHeight + h;
 
-            indices[(w * (m_NumHeight - 1) + h) * 6 + 3] = w * m_NumWidth + h + 1;
-            indices[(w * (m_NumHeight - 1) + h) * 6 + 4] = (w + 1) * m_NumWidth + h + 1;
-            indices[(w * (m_NumHeight - 1) + h) * 6 + 5] = (w + 1) * m_NumWidth + h;
+            indices[(w * (m_NumHeight - 1) + h) * 6 + 3] = w * m_NumHeight + h + 1;
+            indices[(w * (m_NumHeight - 1) + h) * 6 + 4] = (w + 1) * m_NumHeight + h + 1;
+            indices[(w * (m_NumHeight - 1) + h) * 6 + 5] = (w + 1) * m_NumHeight + h;
 		}
 	}
 
@@ -79,14 +82,19 @@ void Cloth::FixedUpdate(float deltaTime)
 
 void Cloth::Draw()
 {
+    glUseProgram(m_Scene->GetShaderProgram());
 	glBindVertexArray(m_vao);
 
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
 
 	glBufferData(GL_ARRAY_BUFFER, m_Particles.size() * sizeof(Particle), &m_Particles[0], GL_STATIC_DRAW);
 
+	auto mvp = m_Scene->GetMVP(0.f, 0.f, 0.f);
+	int mvpLocation = glGetUniformLocation(m_Scene->GetSceneShaderProgram(), "uMVP");
+	glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, glm::value_ptr(mvp));
+
 	// 5. Issue the draw call
-	glDrawElements(GL_TRIANGLES, (m_NumWidth - 1) * (m_NumHeight - 1) * 2, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, (m_NumWidth - 1) * (m_NumHeight - 1) * 6, GL_UNSIGNED_INT, 0);
 
 	glBindVertexArray(0);
 

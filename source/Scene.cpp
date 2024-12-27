@@ -71,6 +71,33 @@ Scene::Scene(Application* application)
 	// Once linked, we can delete the intermediate shader objects
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
+
+	{
+		// Vertex shader
+		unsigned int vertexShader = compileShader("source/shaders/scene_vertex.glsl", GL_VERTEX_SHADER);
+
+		// Fragment shader
+		unsigned int fragmentShader = compileShader("source/shaders/scene_fragment.glsl", GL_FRAGMENT_SHADER);
+
+		// Link into shader program
+		m_sceneShaderProgram = glCreateProgram();
+		glAttachShader(m_sceneShaderProgram, vertexShader);
+		glAttachShader(m_sceneShaderProgram, fragmentShader);
+		glLinkProgram(m_sceneShaderProgram);
+
+		// Check link status
+		GLint success;
+		glGetProgramiv(m_sceneShaderProgram, GL_LINK_STATUS, &success);
+		if (!success) {
+			char infoLog[512];
+			glGetProgramInfoLog(m_sceneShaderProgram, 512, nullptr, infoLog);
+			std::cerr << "ERROR::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+		}
+
+		// Once linked, we can delete the intermediate shader objects
+		glDeleteShader(vertexShader);
+		glDeleteShader(fragmentShader);
+	}
 }
 
 Scene::~Scene()
@@ -110,12 +137,12 @@ void Scene::FixedUpdate(float deltaTime)
 
 void Scene::Draw()
 {
-	glUseProgram(m_shaderProgram);
+	//glUseProgram(m_shaderProgram);
 
-	int mvpLocation = glGetUniformLocation(m_shaderProgram, "uMVP");
+	//int mvpLocation = glGetUniformLocation(m_shaderProgram, "uMVP");
 	//glm::mat4 MVP = projection * view * model;
 	//glUseProgram(shaderProgram);
-	glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, glm::value_ptr(m_application->m_mvp));
+	//glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, glm::value_ptr(m_application->m_mvp));
 
 	for (auto actor : m_Actors)
 	{
@@ -127,7 +154,7 @@ void Scene::LoadSceneSphereAndCloth()
 {
 	m_Actors.clear();
 	m_Solvers.clear();
-	std::shared_ptr<Sphere> sphere = std::make_shared<Sphere>(0.1f);
+	std::shared_ptr<Sphere> sphere = std::make_shared<Sphere>(this, 0.1f);
 	sphere->Initialize(glm::vec3(0, 0, 1), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(sphere);
 	std::shared_ptr<Cloth> cloth;
@@ -135,12 +162,12 @@ void Scene::LoadSceneSphereAndCloth()
 	std::shared_ptr<ClothSolverBase> solver;
 #if USE_GPU_SOLVER
 	solver = std::make_shared<ClothSolverGPU>();
-	cloth = std::make_shared<Cloth>(2, 2, 64, 64, true, glm::vec3(1.0f, 0.6f, 0.6f));
+	cloth = std::make_shared<Cloth>(this, 2, 2, 64, 64, true, glm::vec3(1.0f, 0.6f, 0.6f));
 	cloth->Initialize(glm::vec3(0, 0, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(cloth);
 #else
 	solver = std::make_shared<ClothSolverCPU>();
-	cloth = std::make_shared<Cloth>(2, 2, 16, 16, true, glm::vec3(1.0f, 0.6f, 0.6f));
+	cloth = std::make_shared<Cloth>(this, 2, 2, 16, 16, true, glm::vec3(1.0f, 0.6f, 0.6f));
 	cloth->Initialize(glm::vec3(0, 0, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(cloth);
 	dynamic_cast<ClothSolverCPU*>(solver.get())->m_MinDistanceBetweenParticles = 0.05;
@@ -164,7 +191,7 @@ void Scene::LoadSceneClothAndCloth()
 {
 	m_Actors.clear();
 	m_Solvers.clear();
-	std::shared_ptr<Cube> platform = std::make_shared<Cube>(3, 0.2, 2);
+	std::shared_ptr<Cube> platform = std::make_shared<Cube>(this, 3, 0.2, 2);
 	platform->Initialize(glm::vec3(0, -1, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
 	AddActor(platform);
 	std::shared_ptr<Cloth> cloth0;
@@ -174,17 +201,17 @@ void Scene::LoadSceneClothAndCloth()
 	std::shared_ptr<ClothSolverBase> solver;
 #if USE_GPU_SOLVER
 	solver = std::make_shared<ClothSolverGPU>();
-	cloth0 = std::make_shared<Cloth>(1, 1, 32, 32, false, glm::vec3(1.0f, 0.6f, 0.6f));
+	cloth0 = std::make_shared<Cloth>(this, 1, 1, 32, 32, false, glm::vec3(1.0f, 0.6f, 0.6f));
 	cloth0->Initialize(glm::vec3(-1, 0, 0), glm::vec3(1, 1, 1), glm::vec3(90, 0, 0));
 	AddActor(cloth0);
-	cloth1 = std::make_shared<Cloth>(1, 1, 32, 32, true, glm::vec3(0.6f, 1.0f, 0.6f));
+	cloth1 = std::make_shared<Cloth>(this, 1, 1, 32, 32, true, glm::vec3(0.6f, 1.0f, 0.6f));
 	cloth1->Initialize(glm::vec3(1, 0, 0), glm::vec3(1, 1, 1), glm::vec3(45, 90, 0));
 	AddActor(cloth1);
 #else
-	cloth0 = std::make_shared<Cloth>(1, 1, 16, 16, true, glm::vec3(1.0f, 0.6f, 0.6f));
+	cloth0 = std::make_shared<Cloth>(this, 1, 1, 16, 16, true, glm::vec3(1.0f, 0.6f, 0.6f));
 	cloth0->Initialize(glm::vec3(-1, 0, 0), glm::vec3(1, 1, 1), glm::vec3(90, 0, 0));
 	AddActor(cloth0);
-	cloth1 = std::make_shared<Cloth>(1, 1, 16, 16, true, glm::vec3(0.6f, 1.0f, 0.6f));
+	cloth1 = std::make_shared<Cloth>(this, 1, 1, 16, 16, true, glm::vec3(0.6f, 1.0f, 0.6f));
 	cloth1->Initialize(glm::vec3(1, 0, 0), glm::vec3(1, 1, 1), glm::vec3(45, 90, 0));
 	AddActor(cloth1);
 	solver = std::make_shared<ClothSolverCPU>();
@@ -204,4 +231,18 @@ void Scene::LoadSceneClothAndCloth()
 	cloth1->AddSolver(solver.get());
 	solver->OnInitFinish();
 	m_Solvers.push_back(solver);
+}
+
+glm::mat4 Scene::GetMVP(float x, float y, float z) {
+	float width = m_application->GetWidth();
+    float height = m_application->GetHeight();
+	float aspectRatio = (float)width / (float)height;
+	glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
+	glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+	glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+	glm::mat4 projection = glm::perspective(glm::radians(30.0f), aspectRatio, 0.001f, 1000.0f);
+	glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
+    glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+	glm::mat4 mvp = projection * view * model;
+    return mvp;
 }
