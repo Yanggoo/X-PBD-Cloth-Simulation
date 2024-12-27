@@ -22,6 +22,7 @@ public:
 	void DrawTriangle(Particle* p1, Particle* p2, Particle* p3, const glm::vec3 color);
 	Particle* GetParticle(int w, int h);
 	void AddSolver(ClothSolverBase* solver);
+	void UpdateNormals();
 
 private:
 	int m_NumWidth;

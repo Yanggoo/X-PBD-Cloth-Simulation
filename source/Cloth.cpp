@@ -44,7 +44,7 @@ m_Width(width), m_Height(height), m_Fixed(fixed), m_Color(color), m_Scene(scene)
 	glBindVertexArray(m_vao);
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
 
-	glBufferData(GL_ARRAY_BUFFER, m_Particles.size() * sizeof(Particle), &m_Particles[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, m_Particles.size() * sizeof(Particle), m_Particles.data(), GL_STATIC_DRAW);
 
 	unsigned int EBO;
 	glGenBuffers(1, &EBO);
@@ -60,6 +60,16 @@ m_Width(width), m_Height(height), m_Fixed(fixed), m_Color(color), m_Scene(scene)
 		GL_FALSE,        // whether to normalize
 		sizeof(Particle),// stride (distance between consecutive vertex attributes)
 		(void*) 0        // offset in the array (where does the position data start?)
+	);
+
+	glEnableVertexAttribArray(1); // enable the attribute at location 0
+	glVertexAttribPointer(
+		1,               // location of the attribute in the vertex shader
+		3,               // number of components (x, y, z)
+		GL_FLOAT,        // data type
+		GL_FALSE,        // whether to normalize
+		sizeof(Particle),// stride (distance between consecutive vertex attributes)
+		(void*)offsetof(Particle, m_Normal)        // offset in the array (where does the position data start?)
 	);
 
 	glBindVertexArray(0);
@@ -87,6 +97,7 @@ void Cloth::Draw()
 
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
 
+	UpdateNormals();
 	glBufferData(GL_ARRAY_BUFFER, m_Particles.size() * sizeof(Particle), &m_Particles[0], GL_STATIC_DRAW);
 
 	auto mvp = m_Scene->GetMVP(0.f, 0.f, 0.f);
@@ -144,4 +155,29 @@ void Cloth::AddSolver(ClothSolverBase* solver)
 {
 	m_ClothSolver = solver;
 	solver->ResponsibleFor(this);
+}
+
+void Cloth::UpdateNormals() {
+	// Calculate face normals and accumulate
+	for (size_t w = 0; w < m_NumWidth - 1; w++) {
+		for (size_t h = 0; h < m_NumHeight - 1; h++) {
+			glm::vec3& p0 = m_Particles[w * m_NumHeight + h].m_Position;
+			glm::vec3& p1 = m_Particles[w * m_NumHeight + h + 1].m_Position;
+			glm::vec3& p2 = m_Particles[(w + 1) * m_NumHeight + h].m_Position;
+			glm::vec3& p3 = m_Particles[(w + 1) * m_NumHeight + h + 1].m_Position;
+
+			glm::vec3 normal0 = glm::normalize(glm::cross(p1 - p0, p2 - p0));
+			glm::vec3 normal1 = glm::normalize(glm::cross(p2 - p3, p1 - p3));
+
+			m_Particles[w * m_NumHeight + h].m_Normal += normal0;
+			m_Particles[w * m_NumHeight + h + 1].m_Normal += normal0 + normal1;
+			m_Particles[(w + 1) * m_NumHeight + h].m_Normal += normal0 + normal1;
+			m_Particles[(w + 1) * m_NumHeight + h + 1].m_Normal += normal1;
+		}
+	}
+
+	// Normalize the accumulated normals
+	for (auto& particle : m_Particles) {
+		particle.m_Normal = glm::normalize(particle.m_Normal);
+	}
 }
