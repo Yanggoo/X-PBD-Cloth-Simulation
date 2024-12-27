@@ -8,7 +8,7 @@ out vec4 FragColor;
 void main()
 {
     vec4 lightDir = normalize(vec4(1.0, 1.0, 1.0, 0.0));
-    vec4 baseColor = vec4(1.0, 0.0, 0.0, 1.0);
+    vec4 baseColor = vec4(0.0, 0.0, 1.0, 1.0);
     float ambientStrength = 0.1;
     float diffuseStrength = 0.5;
     float specularStrength = 0.5;
