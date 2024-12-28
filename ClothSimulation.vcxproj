@@ -132,6 +132,7 @@
     <ClInclude Include="source\Scene.h" />
     <ClInclude Include="source\Application.h" />
     <ClInclude Include="source\SolverKernel.cuh" />
+    <ClInclude Include="source\stb_image.h" />
     <ClInclude Include="source\Timer.h" />
     <ClInclude Include="source\Transform.h" />
     <ClInclude Include="source\Sphere.h" />

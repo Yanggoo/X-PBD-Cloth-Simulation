@@ -5,6 +5,9 @@
 
 #include "Scene.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 Cloth::Cloth(Scene* scene, float width, float height, int num_width, int num_height, bool fixed, glm::vec3 color) : m_NumWidth(num_width), m_NumHeight(num_height), 
 m_Width(width), m_Height(height), m_Fixed(fixed), m_Color(color), m_Scene(scene)
 {
@@ -18,7 +21,9 @@ m_Width(width), m_Height(height), m_Fixed(fixed), m_Color(color), m_Scene(scene)
 				(h == 0) && (w == m_NumWidth - 1))) {
 				inv_mass = 0.0f; //fix only edge point
 			}
-			m_Particles.emplace_back(inv_mass, pos);
+
+            glm::vec2 uv = glm::vec2(w / (float)(m_NumWidth - 1), h / (float)(m_NumHeight - 1));
+			m_Particles.emplace_back(inv_mass, pos, glm::vec3(0, 0, 0), uv);
 		}
 	}
 
@@ -72,8 +77,94 @@ m_Width(width), m_Height(height), m_Fixed(fixed), m_Color(color), m_Scene(scene)
 		(void*)offsetof(Particle, m_Normal)        // offset in the array (where does the position data start?)
 	);
 
+	glEnableVertexAttribArray(2); // enable the attribute at location 0
+	glVertexAttribPointer(
+		2,               // location of the attribute in the vertex shader
+		2,               // number of components (x, y, z)
+		GL_FLOAT,        // data type
+		GL_FALSE,        // whether to normalize
+		sizeof(Particle),// stride (distance between consecutive vertex attributes)
+		(void*)offsetof(Particle, m_TexCoord)        // offset in the array (where does the position data start?)
+	);
+
+	glEnableVertexAttribArray(3); // enable the attribute at location 0
+	glVertexAttribPointer(
+		3,               // location of the attribute in the vertex shader
+		4,               // number of components (x, y, z)
+		GL_FLOAT,        // data type
+		GL_FALSE,        // whether to normalize
+		sizeof(Particle),// stride (distance between consecutive vertex attributes)
+		(void*)offsetof(Particle, m_Tangent)        // offset in the array (where does the position data start?)
+	);
+
 	glBindVertexArray(0);
 	//glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	{
+		int width, height, channels;
+		unsigned char* data = stbi_load("source/assets/base.jpg", &width, &height, &channels, 0);
+		if (!data) {
+			std::cerr << "Failed to load texture" << std::endl;
+			// handle error
+		}
+
+		glGenTextures(1, &m_texId);
+		glBindTexture(GL_TEXTURE_2D, m_texId);
+		
+
+		// upload the image data
+		// if channels=3, format = GL_RGB; if channels=4, format = GL_RGBA
+		GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+
+		// generate mipmaps
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		// set parameters (wrapping, filtering)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		// done with data on CPU
+		stbi_image_free(data);
+
+		// unbind
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+	
+	{
+		int width, height, channels;
+		unsigned char* data = stbi_load("source/assets/normal.jpg", &width, &height, &channels, 0);
+		if (!data) {
+			std::cerr << "Failed to load texture" << std::endl;
+			// handle error
+		}
+
+		glGenTextures(1, &m_texNormalId);
+		glBindTexture(GL_TEXTURE_2D, m_texNormalId);
+
+
+		// upload the image data
+		// if channels=3, format = GL_RGB; if channels=4, format = GL_RGBA
+		GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+
+		// generate mipmaps
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		// set parameters (wrapping, filtering)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		// done with data on CPU
+		stbi_image_free(data);
+
+		// unbind
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
 }
 
 Cloth::~Cloth()
@@ -92,17 +183,35 @@ void Cloth::FixedUpdate(float deltaTime)
 
 void Cloth::Draw()
 {
-    glUseProgram(m_Scene->GetShaderProgram());
+	auto shaderProgram = m_Scene->GetShaderProgram();
+    glUseProgram(shaderProgram);
 	glBindVertexArray(m_vao);
 
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
 
 	UpdateNormals();
+	UpdateTangents();
 	glBufferData(GL_ARRAY_BUFFER, m_Particles.size() * sizeof(Particle), &m_Particles[0], GL_STATIC_DRAW);
 
 	auto mvp = m_Scene->GetMVP(0.f, 0.f, 0.f);
-	int mvpLocation = glGetUniformLocation(m_Scene->GetSceneShaderProgram(), "uMVP");
+	int mvpLocation = glGetUniformLocation(shaderProgram, "uMVP");
 	glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, glm::value_ptr(mvp));
+
+	GLint loc = glGetUniformLocation(shaderProgram, "uTexBaseColor");
+	glUniform1i(loc, 0); // means "texture unit 0"
+
+	// Activate texture unit 0, bind the texture
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_texId);
+
+	{
+		GLint loc = glGetUniformLocation(shaderProgram, "uTexNormal");
+		glUniform1i(loc, 1); // means "texture unit 0"
+
+		// Activate texture unit 0, bind the texture
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, m_texNormalId);
+	}
 
 	// 5. Issue the draw call
 	glDrawElements(GL_TRIANGLES, (m_NumWidth - 1) * (m_NumHeight - 1) * 6, GL_UNSIGNED_INT, 0);
@@ -179,5 +288,42 @@ void Cloth::UpdateNormals() {
 	// Normalize the accumulated normals
 	for (auto& particle : m_Particles) {
 		particle.m_Normal = glm::normalize(particle.m_Normal);
+	}
+}
+
+void Cloth::UpdateTangents() {
+	for (size_t w = 0; w < m_NumWidth - 1; w++) {
+		for (size_t h = 0; h < m_NumHeight - 1; h++) {
+            glm::vec3& p0 = m_Particles[w * m_NumHeight + h].m_Position;
+            glm::vec3& p1 = m_Particles[w * m_NumHeight + h + 1].m_Position;
+            glm::vec3& p2 = m_Particles[(w + 1) * m_NumHeight + h].m_Position;
+            glm::vec2& uv0 = m_Particles[w * m_NumHeight + h].m_TexCoord;
+            glm::vec2& uv1 = m_Particles[w * m_NumHeight + h + 1].m_TexCoord;
+            glm::vec2& uv2 = m_Particles[(w + 1) * m_NumHeight + h].m_TexCoord;
+            glm::vec3 dp1 = p1 - p0;
+            glm::vec3 dp2 = p2 - p0;
+            glm::vec2 duv1 = uv1 - uv0;
+            glm::vec2 duv2 = uv2 - uv0;
+			float r = 1.0f / (duv1.x * duv2.y - duv2.x * duv1.y);
+            glm::vec3 tangent = (dp1 * duv2.y - dp2 * duv1.y) * r;
+            glm::vec3 bitangent = (dp2 * duv1.x - dp1 * duv2.x) * r;
+            glm::vec3 normal = m_Particles[w * m_NumHeight + h].m_Normal;
+            tangent = tangent - normal * glm::dot(normal, tangent);
+			float handedness = (glm::dot(glm::cross(normal, tangent), bitangent) < 0.0f) ? -1.0f : 1.0f;
+            glm::vec4 combinedTangent = glm::normalize(glm::vec4(tangent, handedness));
+            m_Particles[w * m_NumHeight + h].m_Tangent = combinedTangent;
+
+			if (w == m_NumWidth - 2) {
+                m_Particles[(w + 1) * m_NumHeight + h].m_Tangent = combinedTangent;
+			}
+
+            if (h == m_NumHeight - 2) {
+                m_Particles[w * m_NumHeight + h + 1].m_Tangent = combinedTangent;
+            }
+
+            if (w == m_NumWidth - 2 && h == m_NumHeight - 2) {
+                m_Particles[(w + 1) * m_NumHeight + h + 1].m_Tangent = combinedTangent;
+            }
+		}
 	}
 }

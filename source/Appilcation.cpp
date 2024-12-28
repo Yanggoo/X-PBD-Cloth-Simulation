@@ -44,7 +44,8 @@ void Application::Initialize(int argc, char* argv[])
 	ImGui_ImplOpenGL3_Init();
 
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
+	glDepthFunc(GL_LEQUAL);
+	glCullFace(GL_FRONT_AND_BACK);
 
     Reshape(640, 480);
 

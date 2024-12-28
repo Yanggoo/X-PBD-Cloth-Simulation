@@ -23,6 +23,7 @@ public:
 	Particle* GetParticle(int w, int h);
 	void AddSolver(ClothSolverBase* solver);
 	void UpdateNormals();
+	void UpdateTangents();
 
 private:
 	int m_NumWidth;
@@ -37,5 +38,7 @@ private:
 
 	unsigned int m_vao;
 	unsigned int m_vbo;
+	unsigned int m_texId;
+	unsigned int m_texNormalId;
 };
 

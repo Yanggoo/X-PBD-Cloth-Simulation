@@ -13,11 +13,14 @@ void main()
     float diffuseStrength = 0.5;
     float specularStrength = 0.5;
 
+    float NdotL = max(dot(FragNormal, lightDir), 0.0);
     vec4 ambient = ambientStrength * baseColor;
-    vec4 diffuse = diffuseStrength * baseColor * max(dot(FragNormal, lightDir), 0.0);
+    vec4 diffuse = diffuseStrength * baseColor * NdotL;
     vec4 reflectDir = reflect(-lightDir, FragNormal);
     vec4 viewDir = normalize(vec4(0.0, 0.0, 0.0, 1.0) - FragPos);
-    vec4 specular = specularStrength * baseColor * pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+    vec4 halfDir = normalize(lightDir + viewDir);
+    float NdotH = max(dot(FragNormal, halfDir), 0.0);
+    vec4 specular = specularStrength * baseColor * pow(NdotH, 32.0);
 
     vec4 color = ambient + diffuse + specular;
     FragColor = color;
